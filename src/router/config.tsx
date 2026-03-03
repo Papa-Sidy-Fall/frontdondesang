@@ -10,6 +10,7 @@ import TableauDeBordDonneur from "../pages/tableau-de-bord-donneur/page";
 import ConnexionDonneur from "../pages/connexion-donneur/page";
 import ConnexionHopital from "../pages/connexion-hopital/page";
 import ConnexionAdministration from "../pages/connexion-administration/page";
+import DevLogsPage from "../pages/dev-logs/page";
 
 const routes: RouteObject[] = [
   {
@@ -47,6 +48,10 @@ const routes: RouteObject[] = [
   {
     path: "/tableau-de-bord-donneur",
     element: <TableauDeBordDonneur />,
+  },
+  {
+    path: "/dev/logs",
+    element: <DevLogsPage />,
   },
   {
     path: "*",
