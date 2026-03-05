@@ -17,10 +17,13 @@ export default function MessageriePage() {
 
   const [contacts, setContacts] = useState<MessageContactDto[]>([]);
   const [conversations, setConversations] = useState<ConversationDto[]>([]);
+  const [currentRole, setCurrentRole] = useState<string>("");
   const [selectedConversationId, setSelectedConversationId] = useState<string>("");
   const [messages, setMessages] = useState<ConversationMessageDto[]>([]);
   const [messageBody, setMessageBody] = useState("");
-  const [newConversationContactId, setNewConversationContactId] = useState("");
+  const [newConversationHospitalId, setNewConversationHospitalId] = useState("");
+  const [newConversationDonorId, setNewConversationDonorId] = useState("");
+  const [newConversationSingleContactId, setNewConversationSingleContactId] = useState("");
   const [newConversationSubject, setNewConversationSubject] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,6 +32,21 @@ export default function MessageriePage() {
     () => conversations.find((conversation) => conversation.id === selectedConversationId) ?? null,
     [conversations, selectedConversationId]
   );
+  const hospitalContacts = useMemo(
+    () => contacts.filter((contact) => contact.role === "HOSPITAL"),
+    [contacts]
+  );
+  const donorContacts = useMemo(
+    () => contacts.filter((contact) => contact.role === "DONOR"),
+    [contacts]
+  );
+  const singleSelectableContacts = useMemo(() => {
+    if (currentRole === "DONOR") {
+      return hospitalContacts;
+    }
+
+    return contacts;
+  }, [contacts, currentRole, hospitalContacts]);
 
   const loadBaseData = async () => {
     const token = getAccessToken();
@@ -42,7 +60,8 @@ export default function MessageriePage() {
       setLoading(true);
       setError("");
 
-      await getCurrentUser(token);
+      const profile = await getCurrentUser(token);
+      setCurrentRole(profile.role);
 
       const [contactsResponse, conversationsResponse] = await Promise.all([
         getMessageContacts(),
@@ -74,6 +93,28 @@ export default function MessageriePage() {
   }, []);
 
   useEffect(() => {
+    if (
+      newConversationSingleContactId &&
+      !singleSelectableContacts.some((contact) => contact.id === newConversationSingleContactId)
+    ) {
+      setNewConversationSingleContactId("");
+    }
+  }, [newConversationSingleContactId, singleSelectableContacts]);
+
+  useEffect(() => {
+    if (
+      newConversationHospitalId &&
+      !hospitalContacts.some((contact) => contact.id === newConversationHospitalId)
+    ) {
+      setNewConversationHospitalId("");
+    }
+
+    if (newConversationDonorId && !donorContacts.some((contact) => contact.id === newConversationDonorId)) {
+      setNewConversationDonorId("");
+    }
+  }, [newConversationHospitalId, newConversationDonorId, hospitalContacts, donorContacts]);
+
+  useEffect(() => {
     if (!selectedConversationId) {
       setMessages([]);
       return;
@@ -94,7 +135,12 @@ export default function MessageriePage() {
   const handleCreateConversation = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!newConversationContactId) {
+    const participantUserId =
+      currentRole === "HOSPITAL"
+        ? newConversationHospitalId || newConversationDonorId
+        : newConversationSingleContactId;
+
+    if (!participantUserId) {
       setError("Choisissez un contact.");
       return;
     }
@@ -102,12 +148,14 @@ export default function MessageriePage() {
     try {
       setError("");
       const created = await createConversation({
-        participantUserId: newConversationContactId,
+        participantUserId,
         subject: newConversationSubject || undefined,
       });
 
       setNewConversationSubject("");
-      setNewConversationContactId("");
+      setNewConversationHospitalId("");
+      setNewConversationDonorId("");
+      setNewConversationSingleContactId("");
 
       await loadBaseData();
       setSelectedConversationId(created.conversationId);
@@ -154,19 +202,65 @@ export default function MessageriePage() {
         {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>}
 
         <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <form onSubmit={handleCreateConversation} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <select
-              value={newConversationContactId}
-              onChange={(event) => setNewConversationContactId(event.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2"
-            >
-              <option value="">Nouveau contact</option>
-              {contacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.nom} ({contact.role})
+          <form
+            onSubmit={handleCreateConversation}
+            className={`grid grid-cols-1 ${currentRole === "HOSPITAL" ? "md:grid-cols-4" : "md:grid-cols-3"} gap-3`}
+          >
+            {currentRole === "HOSPITAL" ? (
+              <>
+                <select
+                  value={newConversationHospitalId}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setNewConversationHospitalId(value);
+                    if (value) {
+                      setNewConversationDonorId("");
+                    }
+                  }}
+                  className="border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="">Hôpital / CNTS</option>
+                  {hospitalContacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.hospitalName ?? contact.nom}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={newConversationDonorId}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setNewConversationDonorId(value);
+                    if (value) {
+                      setNewConversationHospitalId("");
+                    }
+                  }}
+                  className="border border-gray-300 rounded-lg px-3 py-2"
+                >
+                  <option value="">Donneur</option>
+                  {donorContacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.nom}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <select
+                value={newConversationSingleContactId}
+                onChange={(event) => setNewConversationSingleContactId(event.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2"
+              >
+                <option value="">
+                  {currentRole === "DONOR" ? "Hôpital / CNTS" : "Nouveau contact"}
                 </option>
-              ))}
-            </select>
+                {singleSelectableContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.hospitalName ?? contact.nom}
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               value={newConversationSubject}
               onChange={(event) => setNewConversationSubject(event.target.value)}

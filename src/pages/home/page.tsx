@@ -23,6 +23,9 @@ export default function Home() {
               <a href="#apropos" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">À propos</a>
               <a href="#comment" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">Comment ça marche</a>
               <a href="#temoignages" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">Témoignages</a>
+              <Link to="/connexion-donneur" className="border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors cursor-pointer whitespace-nowrap">
+                Se connecter
+              </Link>
               <Link to="/inscription" className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap">
                 Devenir Donneur
               </Link>
@@ -68,8 +71,15 @@ export default function Home() {
               >
                 Témoignages
               </a>
-              <Link 
-                to="/inscription" 
+              <Link
+                to="/connexion-donneur"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors cursor-pointer text-center whitespace-nowrap"
+              >
+                Se connecter
+              </Link>
+              <Link
+                to="/inscription"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors cursor-pointer text-center whitespace-nowrap"
               >

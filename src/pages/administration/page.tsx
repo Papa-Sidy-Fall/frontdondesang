@@ -95,7 +95,12 @@ export default function Administration() {
       setCurrentUserInStorage(profile);
       setDashboard(dashboardData);
     } catch (caughtError) {
-      clearSession();
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        clearSession();
+        navigate("/connexion-donneur", { replace: true });
+        return;
+      }
+
       setError(caughtError instanceof ApiError ? caughtError.message : "Impossible de charger le tableau de bord");
     } finally {
       setLoading(false);

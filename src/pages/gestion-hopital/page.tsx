@@ -45,7 +45,9 @@ function toApiStatus(status: RendezVous["statut"]): "PENDING" | "CONFIRMED" | "C
 
 export default function GestionHopital() {
   const navigate = useNavigate();
+  const DONORS_PER_PAGE = 5;
   const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences" | "donneurs">("stocks");
+  const [donorPage, setDonorPage] = useState(1);
   const [showUrgenceModal, setShowUrgenceModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [urgenceData, setUrgenceData] = useState({
@@ -99,7 +101,12 @@ export default function GestionHopital() {
       setCurrentUserInStorage(profile);
       setDashboard(dashboardData);
     } catch (caughtError) {
-      clearSession();
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        clearSession();
+        navigate("/connexion-donneur", { replace: true });
+        return;
+      }
+
       setError(caughtError instanceof ApiError ? caughtError.message : "Impossible de charger le tableau de bord");
     } finally {
       setLoading(false);
@@ -114,6 +121,18 @@ export default function GestionHopital() {
   const stocks = dashboard?.stocks ?? [];
   const rendezous = dashboard?.rendezvous ?? [];
   const urgences = dashboard?.urgences ?? [];
+  const donorList = dashboard?.donneurs ?? [];
+  const donorTotalPages = Math.max(1, Math.ceil(donorList.length / DONORS_PER_PAGE));
+  const paginatedDonors = donorList.slice(
+    (donorPage - 1) * DONORS_PER_PAGE,
+    donorPage * DONORS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (donorPage > donorTotalPages) {
+      setDonorPage(donorTotalPages);
+    }
+  }, [donorPage, donorTotalPages]);
 
   const summary = useMemo(
     () =>
@@ -567,7 +586,7 @@ export default function GestionHopital() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Donneurs</h2>
 
             <div className="space-y-4">
-              {dashboard.donneurs.map((donneur) => (
+              {paginatedDonors.map((donneur) => (
                 <div
                   key={donneur.id}
                   className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors"
@@ -606,10 +625,36 @@ export default function GestionHopital() {
                   </div>
                 </div>
               ))}
-              {dashboard.donneurs.length === 0 && (
+              {donorList.length === 0 && (
                 <p className="text-sm text-gray-500">Aucun donneur associé pour le moment.</p>
               )}
             </div>
+
+            {donorList.length > DONORS_PER_PAGE && (
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Page {donorPage} / {donorTotalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDonorPage((page) => Math.max(1, page - 1))}
+                    disabled={donorPage === 1}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                  >
+                    Précédent
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDonorPage((page) => Math.min(donorTotalPages, page + 1))}
+                    disabled={donorPage === donorTotalPages}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                  >
+                    Suivant
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
