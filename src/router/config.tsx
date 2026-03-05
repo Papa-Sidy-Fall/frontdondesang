@@ -11,6 +11,8 @@ import ConnexionDonneur from "../pages/connexion-donneur/page";
 import ConnexionHopital from "../pages/connexion-hopital/page";
 import ConnexionAdministration from "../pages/connexion-administration/page";
 import DevLogsPage from "../pages/dev-logs/page";
+import MessageriePage from "../pages/messagerie/page";
+import GestionStocksPage from "../pages/gestion-stocks/page";
 
 const routes: RouteObject[] = [
   {
@@ -52,6 +54,14 @@ const routes: RouteObject[] = [
   {
     path: "/dev/logs",
     element: <DevLogsPage />,
+  },
+  {
+    path: "/messagerie",
+    element: <MessageriePage />,
+  },
+  {
+    path: "/gestion-stocks",
+    element: <GestionStocksPage />,
   },
   {
     path: "*",

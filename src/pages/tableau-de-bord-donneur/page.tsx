@@ -206,6 +206,12 @@ export default function TableauDeBordDonneur() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => navigate("/messagerie")}
+                className="hidden sm:inline-flex px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Messagerie
+              </button>
+              <button
                 onClick={() => {
                   setPasswordError("");
                   setPasswordSuccess("");
@@ -462,9 +468,10 @@ export default function TableauDeBordDonneur() {
                 {dashboard.campagnes.map((campagne) => (
                   <div key={campagne.id} className="bg-green-50 rounded-lg p-4 border border-green-200">
                     <h4 className="font-semibold text-gray-900 mb-2">{campagne.titre}</h4>
+                    <p className="text-sm text-gray-700 mb-2">{campagne.description}</p>
                     <p className="text-sm text-gray-600 mb-1">
                       <i className="ri-calendar-line mr-1"></i>
-                      {formatDate(campagne.date)}
+                      {formatDate(campagne.date)} - {formatDate(campagne.dateFin)}
                     </p>
                     <p className="text-sm text-gray-600">
                       <i className="ri-map-pin-line mr-1"></i>

@@ -45,7 +45,7 @@ function toApiStatus(status: RendezVous["statut"]): "PENDING" | "CONFIRMED" | "C
 
 export default function GestionHopital() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences">("stocks");
+  const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences" | "donneurs">("stocks");
   const [showUrgenceModal, setShowUrgenceModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [urgenceData, setUrgenceData] = useState({
@@ -304,6 +304,18 @@ export default function GestionHopital() {
             </div>
             <div className="flex items-center gap-4">
               <button
+                onClick={() => navigate("/messagerie")}
+                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Messagerie
+              </button>
+              <button
+                onClick={() => navigate("/gestion-stocks")}
+                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Stocks manuels
+              </button>
+              <button
                 onClick={() => {
                   setPasswordError("");
                   setPasswordSuccess("");
@@ -371,6 +383,15 @@ export default function GestionHopital() {
           >
             <i className="ri-alarm-warning-line mr-2"></i>
             Urgences
+          </button>
+          <button
+            onClick={() => setActiveTab("donneurs")}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === "donneurs" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <i className="ri-team-line mr-2"></i>
+            Donneurs
           </button>
         </div>
 
@@ -513,6 +534,81 @@ export default function GestionHopital() {
                 </div>
               ))}
               {urgences.length === 0 && <p className="text-sm text-gray-500">Aucune alerte d'urgence.</p>}
+            </div>
+
+            <div className="mt-10">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Campagnes nationales</h3>
+              <div className="space-y-3">
+                {dashboard.campagnes.map((campagne) => (
+                  <div key={campagne.id} className="border border-green-200 bg-green-50 rounded-xl p-4">
+                    <h4 className="font-semibold text-gray-900">{campagne.titre}</h4>
+                    <p className="text-sm text-gray-700 mt-1">{campagne.description}</p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      <i className="ri-calendar-line mr-1"></i>
+                      {new Date(campagne.dateDebut).toLocaleDateString("fr-FR")} -{" "}
+                      {new Date(campagne.dateFin).toLocaleDateString("fr-FR")}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <i className="ri-map-pin-line mr-1"></i>
+                      {campagne.lieu}
+                    </p>
+                  </div>
+                ))}
+                {dashboard.campagnes.length === 0 && (
+                  <p className="text-sm text-gray-500">Aucune campagne active.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "donneurs" && (
+          <div className="bg-white rounded-3xl shadow-xl p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Donneurs</h2>
+
+            <div className="space-y-4">
+              {dashboard.donneurs.map((donneur) => (
+                <div
+                  key={donneur.id}
+                  className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-xl">
+                        <i className="ri-user-line text-2xl text-green-600"></i>
+                      </div>
+                      <div>
+                        <div className="font-bold text-lg text-gray-900">{donneur.nom}</div>
+                        <div className="text-sm text-gray-600">{donneur.email}</div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <i className="ri-phone-line mr-1"></i>
+                          {donneur.telephone}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <InfoTile label="Groupe" value={donneur.groupeSanguin} />
+                      <InfoTile label="Ville" value={donneur.ville} />
+                      <InfoTile label="Quartier" value={donneur.quartier} />
+                      <InfoTile
+                        label="Inscription"
+                        value={new Date(donneur.inscritLe).toLocaleDateString("fr-FR")}
+                      />
+                      <InfoTile
+                        label="Naissance"
+                        value={
+                          donneur.dateNaissance !== "-"
+                            ? new Date(donneur.dateNaissance).toLocaleDateString("fr-FR")
+                            : "-"
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {dashboard.donneurs.length === 0 && (
+                <p className="text-sm text-gray-500">Aucun donneur associé pour le moment.</p>
+              )}
             </div>
           </div>
         )}
@@ -697,4 +793,13 @@ function getUrgenceBadgeClass(color: "red" | "yellow" | "green") {
   }
 
   return "bg-green-600";
+}
+
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-center">
+      <div className="font-semibold text-gray-900">{value}</div>
+      <div className="text-gray-600">{label}</div>
+    </div>
+  );
 }

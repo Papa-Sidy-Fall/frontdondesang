@@ -42,7 +42,10 @@ export interface DonorDashboardDto {
   campagnes: Array<{
     id: string;
     titre: string;
+    description: string;
     date: string;
+    dateFin: string;
+    statut: string;
     lieu: string;
   }>;
 }
@@ -63,7 +66,9 @@ export interface HospitalDashboardDto {
   }>;
   rendezvous: Array<{
     id: string;
+    donorUserId: string;
     donneur: string;
+    email: string;
     telephone: string;
     groupeSanguin: string;
     date: string;
@@ -80,6 +85,26 @@ export interface HospitalDashboardDto {
     notifiedDonors: number;
     positiveResponses: number;
     donationsCompleted: number;
+  }>;
+  donneurs: Array<{
+    id: string;
+    nom: string;
+    email: string;
+    telephone: string;
+    groupeSanguin: string;
+    ville: string;
+    quartier: string;
+    dateNaissance: string;
+    inscritLe: string;
+  }>;
+  campagnes: Array<{
+    id: string;
+    titre: string;
+    description: string;
+    dateDebut: string;
+    dateFin: string;
+    lieu: string;
+    statut: "active" | "terminee" | "planifiee";
   }>;
 }
 
@@ -125,11 +150,31 @@ export interface AdminDashboardDto {
       id: string;
       nom: string;
       email: string;
+      telephone: string;
       groupe: string;
       date: string;
       ville: string;
+      quartier: string;
+      dateNaissance: string;
+    }>;
+    donneursDetails: Array<{
+      id: string;
+      nom: string;
+      email: string;
+      telephone: string;
+      groupe: string;
+      date: string;
+      ville: string;
+      quartier: string;
+      dateNaissance: string;
     }>;
   };
+  cntsStocks: Array<{
+    groupeSanguin: string;
+    quantite: number;
+    seuil: number;
+    statut: "critique" | "faible" | "normal";
+  }>;
 }
 
 export interface CreateCampaignRequestDto {

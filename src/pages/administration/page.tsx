@@ -276,6 +276,18 @@ export default function Administration() {
             </div>
             <div className="flex items-center gap-4">
               <button
+                onClick={() => navigate("/messagerie")}
+                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Messagerie
+              </button>
+              <button
+                onClick={() => navigate("/gestion-stocks")}
+                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Stocks CNTS
+              </button>
+              <button
                 onClick={() => {
                   setPasswordError("");
                   setPasswordSuccess("");
@@ -508,7 +520,7 @@ export default function Administration() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-gray-900">Derniers Donneurs Inscrits</h3>
-              {dashboard.utilisateurs.derniersDonneurs.map((user) => (
+              {dashboard.utilisateurs.donneursDetails.map((user) => (
                 <div key={user.id} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -518,6 +530,10 @@ export default function Administration() {
                       <div>
                         <div className="font-bold text-lg text-gray-900">{user.nom}</div>
                         <div className="text-sm text-gray-600">{user.email}</div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <i className="ri-phone-line mr-1"></i>
+                          {user.telephone}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 text-sm">
@@ -530,16 +546,52 @@ export default function Administration() {
                         <div className="text-gray-600">Ville</div>
                       </div>
                       <div className="text-center">
+                        <div className="font-bold text-gray-900">{user.quartier}</div>
+                        <div className="text-gray-600">Quartier</div>
+                      </div>
+                      <div className="text-center">
                         <div className="font-bold text-gray-900">{new Date(user.date).toLocaleDateString("fr-FR")}</div>
                         <div className="text-gray-600">Inscription</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-gray-900">
+                          {user.dateNaissance !== "-"
+                            ? new Date(user.dateNaissance).toLocaleDateString("fr-FR")
+                            : "-"}
+                        </div>
+                        <div className="text-gray-600">Naissance</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
-              {dashboard.utilisateurs.derniersDonneurs.length === 0 && (
+              {dashboard.utilisateurs.donneursDetails.length === 0 && (
                 <p className="text-sm text-gray-500">Aucun donneur enregistré.</p>
               )}
+            </div>
+
+            <div className="mt-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Stock CNTS</h3>
+              <div className="grid md:grid-cols-4 gap-4">
+                {dashboard.cntsStocks.map((stock) => (
+                  <div key={stock.groupeSanguin} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <div className="font-bold text-lg text-gray-900">{stock.groupeSanguin}</div>
+                    <div className="text-sm text-gray-600">Quantité: {stock.quantite}</div>
+                    <div className="text-sm text-gray-600">Seuil: {stock.seuil}</div>
+                    <span
+                      className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                        stock.statut === "critique"
+                          ? "bg-red-100 text-red-700"
+                          : stock.statut === "faible"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {stock.statut}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
