@@ -3,6 +3,8 @@ export interface UserDto {
   email: string;
   firstName: string;
   lastName: string;
+  role: "DONOR" | "ADMIN" | "HOSPITAL" | string;
+  hospitalName: string | null;
   phone: string | null;
   birthDate: string | null;
   bloodType: string | null;
@@ -33,4 +35,9 @@ export interface RegisterDonorRequestDto {
 export interface LoginDonorRequestDto {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordRequestDto {
+  currentPassword: string;
+  newPassword: string;
 }

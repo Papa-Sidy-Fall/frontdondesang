@@ -1,5 +1,6 @@
 import type {
   AuthResponseDto,
+  ChangePasswordRequestDto,
   LoginDonorRequestDto,
   RegisterDonorRequestDto,
   UserDto,
@@ -16,6 +17,17 @@ export function registerDonor(payload: RegisterDonorRequestDto): Promise<AuthRes
 export function loginDonor(payload: LoginDonorRequestDto): Promise<AuthResponseDto> {
   return httpRequest<AuthResponseDto>("/api/v1/auth/login", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function changePassword(
+  token: string,
+  payload: ChangePasswordRequestDto
+): Promise<void> {
+  return httpRequest<void>("/api/v1/auth/change-password", {
+    method: "POST",
+    token,
     body: JSON.stringify(payload),
   });
 }

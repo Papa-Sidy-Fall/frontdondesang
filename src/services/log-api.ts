@@ -1,5 +1,6 @@
 import type { LogsResponseDto } from "../types/logs";
 import { getAccessToken } from "./auth-storage";
+import { getDevLogsToken } from "./dev-auth-storage";
 import { httpRequest } from "./http-client";
 
 interface GetLogsOptions {
@@ -25,10 +26,11 @@ export async function getLogs(options: GetLogsOptions): Promise<LogsResponseDto>
   }
 
   const token = getAccessToken();
+  const devToken = getDevLogsToken();
 
   return httpRequest<LogsResponseDto>(`/api/v1/logs?${query.toString()}`, {
     method: "GET",
-    token: token ?? undefined,
+    token: devToken ?? token ?? undefined,
     extraHeaders: options.logToken ? { "x-log-token": options.logToken } : undefined,
   });
 }
