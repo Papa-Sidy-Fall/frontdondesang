@@ -539,6 +539,10 @@ export default function Administration() {
                           <i className="ri-phone-line mr-1"></i>
                           {user.telephone}
                         </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <i className="ri-id-card-line mr-1"></i>
+                          CNI: {user.cni}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 text-sm">

@@ -5,6 +5,7 @@ export interface UserDto {
   lastName: string;
   role: "DONOR" | "ADMIN" | "HOSPITAL" | string;
   hospitalName: string | null;
+  cni: string | null;
   phone: string | null;
   birthDate: string | null;
   bloodType: string | null;
@@ -25,7 +26,8 @@ export interface RegisterDonorRequestDto {
   lastName: string;
   email: string;
   password: string;
-  phone?: string;
+  cni: string;
+  phone: string;
   birthDate?: string;
   bloodType?: string;
   city?: string;

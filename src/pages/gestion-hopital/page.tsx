@@ -20,6 +20,7 @@ interface Stock {
 interface RendezVous {
   id: string;
   donneur: string;
+  cni: string;
   telephone: string;
   groupeSanguin: string;
   date: string;
@@ -48,6 +49,8 @@ export default function GestionHopital() {
   const DONORS_PER_PAGE = 5;
   const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences" | "donneurs">("stocks");
   const [donorPage, setDonorPage] = useState(1);
+  const [donorCniQuery, setDonorCniQuery] = useState("");
+  const [appointmentCniQuery, setAppointmentCniQuery] = useState("");
   const [showUrgenceModal, setShowUrgenceModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [urgenceData, setUrgenceData] = useState({
@@ -121,9 +124,17 @@ export default function GestionHopital() {
   const stocks = dashboard?.stocks ?? [];
   const rendezous = dashboard?.rendezvous ?? [];
   const urgences = dashboard?.urgences ?? [];
+  const normalizedAppointmentCniQuery = appointmentCniQuery.trim().toUpperCase();
+  const filteredRendezous = rendezous.filter((rdv) =>
+    !normalizedAppointmentCniQuery ? true : rdv.cni.toUpperCase().includes(normalizedAppointmentCniQuery)
+  );
   const donorList = dashboard?.donneurs ?? [];
-  const donorTotalPages = Math.max(1, Math.ceil(donorList.length / DONORS_PER_PAGE));
-  const paginatedDonors = donorList.slice(
+  const normalizedCniQuery = donorCniQuery.trim().toUpperCase();
+  const filteredDonors = donorList.filter((donor) =>
+    !normalizedCniQuery ? true : donor.cni.toUpperCase().includes(normalizedCniQuery)
+  );
+  const donorTotalPages = Math.max(1, Math.ceil(filteredDonors.length / DONORS_PER_PAGE));
+  const paginatedDonors = filteredDonors.slice(
     (donorPage - 1) * DONORS_PER_PAGE,
     donorPage * DONORS_PER_PAGE
   );
@@ -133,6 +144,10 @@ export default function GestionHopital() {
       setDonorPage(donorTotalPages);
     }
   }, [donorPage, donorTotalPages]);
+
+  useEffect(() => {
+    setDonorPage(1);
+  }, [normalizedCniQuery]);
 
   const summary = useMemo(
     () =>
@@ -469,9 +484,19 @@ export default function GestionHopital() {
         {activeTab === "rendezous" && (
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Rendez-vous</h2>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Recherche par CNI</label>
+              <input
+                type="text"
+                value={appointmentCniQuery}
+                onChange={(event) => setAppointmentCniQuery(event.target.value)}
+                className="w-full md:w-96 px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
+                placeholder="Ex: 123456789012A"
+              />
+            </div>
 
             <div className="space-y-4">
-              {rendezous.map((rdv) => (
+              {filteredRendezous.map((rdv) => (
                 <div key={rdv.id} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1">
@@ -481,6 +506,7 @@ export default function GestionHopital() {
                       <div className="flex-1">
                         <div className="font-bold text-lg text-gray-900">{rdv.donneur}</div>
                         <div className="text-sm text-gray-600 flex items-center gap-4 mt-1 flex-wrap">
+                          <span><i className="ri-id-card-line mr-1"></i>{rdv.cni}</span>
                           <span><i className="ri-phone-line mr-1"></i>{rdv.telephone}</span>
                           <span><i className="ri-drop-line mr-1"></i>{rdv.groupeSanguin}</span>
                           <span><i className="ri-calendar-line mr-1"></i>{new Date(rdv.date).toLocaleDateString("fr-FR")}</span>
@@ -512,7 +538,7 @@ export default function GestionHopital() {
                   </div>
                 </div>
               ))}
-              {rendezous.length === 0 && <p className="text-sm text-gray-500">Aucun rendez-vous pour le moment.</p>}
+              {filteredRendezous.length === 0 && <p className="text-sm text-gray-500">Aucun rendez-vous pour le moment.</p>}
             </div>
           </div>
         )}
@@ -584,6 +610,16 @@ export default function GestionHopital() {
         {activeTab === "donneurs" && (
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Donneurs</h2>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Recherche par CNI</label>
+              <input
+                type="text"
+                value={donorCniQuery}
+                onChange={(event) => setDonorCniQuery(event.target.value)}
+                className="w-full md:w-96 px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
+                placeholder="Ex: 123456789012A"
+              />
+            </div>
 
             <div className="space-y-4">
               {paginatedDonors.map((donneur) => (
@@ -602,6 +638,10 @@ export default function GestionHopital() {
                         <div className="text-sm text-gray-600 mt-1">
                           <i className="ri-phone-line mr-1"></i>
                           {donneur.telephone}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <i className="ri-id-card-line mr-1"></i>
+                          CNI: {donneur.cni}
                         </div>
                       </div>
                     </div>
@@ -625,12 +665,12 @@ export default function GestionHopital() {
                   </div>
                 </div>
               ))}
-              {donorList.length === 0 && (
+              {filteredDonors.length === 0 && (
                 <p className="text-sm text-gray-500">Aucun donneur associé pour le moment.</p>
               )}
             </div>
 
-            {donorList.length > DONORS_PER_PAGE && (
+            {filteredDonors.length > DONORS_PER_PAGE && (
               <div className="mt-6 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
                   Page {donorPage} / {donorTotalPages}

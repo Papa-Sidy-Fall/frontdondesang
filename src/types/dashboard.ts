@@ -69,6 +69,7 @@ export interface HospitalDashboardDto {
     donorUserId: string;
     donneur: string;
     email: string;
+    cni: string;
     telephone: string;
     groupeSanguin: string;
     date: string;
@@ -90,6 +91,7 @@ export interface HospitalDashboardDto {
     id: string;
     nom: string;
     email: string;
+    cni: string;
     telephone: string;
     groupeSanguin: string;
     ville: string;
@@ -150,6 +152,7 @@ export interface AdminDashboardDto {
       id: string;
       nom: string;
       email: string;
+      cni: string;
       telephone: string;
       groupe: string;
       date: string;
@@ -161,6 +164,7 @@ export interface AdminDashboardDto {
       id: string;
       nom: string;
       email: string;
+      cni: string;
       telephone: string;
       groupe: string;
       date: string;

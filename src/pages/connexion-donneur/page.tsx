@@ -24,6 +24,10 @@ export default function ConnexionDonneur() {
     email: "",
     motDePasse: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    motDePasse?: string;
+  }>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +41,22 @@ export default function ConnexionDonneur() {
 
     return searchParams.get("error");
   }, [oauthStatus, oauthToken, searchParams]);
+
+  const validateForm = (): { email?: string; motDePasse?: string } => {
+    const errors: { email?: string; motDePasse?: string } = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^.{8,100}$/;
+
+    if (!emailRegex.test(formData.email.trim())) {
+      errors.email = "Veuillez saisir une adresse email valide.";
+    }
+
+    if (!passwordRegex.test(formData.motDePasse)) {
+      errors.motDePasse = "Le mot de passe doit contenir entre 8 et 100 caractères.";
+    }
+
+    return errors;
+  };
 
   useEffect(() => {
     if (!oauthToken) {
@@ -66,11 +86,19 @@ export default function ConnexionDonneur() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
+    const errors = validateForm();
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      setError("Veuillez corriger les champs de connexion.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await loginDonor({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.motDePasse,
       });
 
@@ -103,6 +131,10 @@ export default function ConnexionDonneur() {
     setFormData((previousState) => ({
       ...previousState,
       [name]: value,
+    }));
+    setFieldErrors((previous) => ({
+      ...previous,
+      [name]: undefined,
     }));
   };
 
@@ -151,10 +183,10 @@ export default function ConnexionDonneur() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
                 placeholder="exemple@email.com"
               />
+              {fieldErrors.email && <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>}
             </div>
 
             <div>
@@ -166,10 +198,12 @@ export default function ConnexionDonneur() {
                 name="motDePasse"
                 value={formData.motDePasse}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
                 placeholder="••••••••"
               />
+              {fieldErrors.motDePasse && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.motDePasse}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
