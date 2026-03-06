@@ -38,7 +38,9 @@ function getStatutLabel(statut: "active" | "terminee" | "planifiee") {
 
 export default function Administration() {
   const navigate = useNavigate();
+  const DONORS_PER_PAGE = 5;
   const [activeTab, setActiveTab] = useState<"statistiques" | "campagnes" | "utilisateurs">("statistiques");
+  const [adminDonorPage, setAdminDonorPage] = useState(1);
   const [showCampagneModal, setShowCampagneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
@@ -152,6 +154,19 @@ export default function Administration() {
       },
     ];
   }, [dashboard]);
+
+  const donorDetails = dashboard?.utilisateurs.donneursDetails ?? [];
+  const donorTotalPages = Math.max(1, Math.ceil(donorDetails.length / DONORS_PER_PAGE));
+  const paginatedDonors = donorDetails.slice(
+    (adminDonorPage - 1) * DONORS_PER_PAGE,
+    adminDonorPage * DONORS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (adminDonorPage > donorTotalPages) {
+      setAdminDonorPage(donorTotalPages);
+    }
+  }, [adminDonorPage, donorTotalPages]);
 
   const handleCampagneSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -525,7 +540,7 @@ export default function Administration() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-gray-900">Derniers Donneurs Inscrits</h3>
-              {dashboard.utilisateurs.donneursDetails.map((user) => (
+              {paginatedDonors.map((user) => (
                 <div key={user.id} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -574,10 +589,36 @@ export default function Administration() {
                   </div>
                 </div>
               ))}
-              {dashboard.utilisateurs.donneursDetails.length === 0 && (
+              {donorDetails.length === 0 && (
                 <p className="text-sm text-gray-500">Aucun donneur enregistré.</p>
               )}
             </div>
+
+            {donorDetails.length > DONORS_PER_PAGE && (
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Page {adminDonorPage} / {donorTotalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminDonorPage((page) => Math.max(1, page - 1))}
+                    disabled={adminDonorPage === 1}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                  >
+                    Précédent
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminDonorPage((page) => Math.min(donorTotalPages, page + 1))}
+                    disabled={adminDonorPage === donorTotalPages}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                  >
+                    Suivant
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="mt-8">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Stock CNTS</h3>
