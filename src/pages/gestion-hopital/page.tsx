@@ -13,6 +13,7 @@ import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../ser
 import { ApiError } from "../../services/http-client";
 import type { HospitalDashboardDto } from "../../types/dashboard";
 import { isCntsUser } from "../../utils/cnts";
+import { getDashboardPathForUser } from "../../utils/dashboard-path";
 
 interface Stock {
   groupeSanguin: string;
@@ -94,23 +95,17 @@ export default function GestionHopital() {
       setLoading(true);
       setError("");
 
-      const [profile, dashboardData] = await Promise.all([
-        getCurrentUser(token),
-        getHospitalDashboard(token),
-      ]);
+      const profile = await getCurrentUser(token);
 
       setCanAccessCntsDashboard(isCntsUser(profile));
 
       if (profile.role !== "HOSPITAL") {
-        if (profile.role === "ADMIN") {
-          navigate("/cnts", { replace: true });
-        } else {
-          navigate("/tableau-de-bord-donneur", { replace: true });
-        }
+        navigate(getDashboardPathForUser(profile), { replace: true });
         return;
       }
 
       setCurrentUserInStorage(profile);
+      const dashboardData = await getHospitalDashboard(token);
       setDashboard(dashboardData);
     } catch (caughtError) {
       if (caughtError instanceof ApiError && caughtError.status === 401) {

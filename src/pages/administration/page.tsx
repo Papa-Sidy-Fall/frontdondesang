@@ -8,6 +8,7 @@ import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../ser
 import { ApiError } from "../../services/http-client";
 import type { AdminDashboardDto } from "../../types/dashboard";
 import { isCntsUser } from "../../utils/cnts";
+import { getDashboardPathForUser } from "../../utils/dashboard-path";
 
 interface Statistique {
   label: string;
@@ -86,21 +87,15 @@ export default function Administration() {
       setLoading(true);
       setError("");
 
-      const [profile, dashboardData] = await Promise.all([
-        getCurrentUser(token),
-        getCntsDashboard(token),
-      ]);
+      const profile = await getCurrentUser(token);
 
       if (!isCntsUser(profile) && profile.role !== "ADMIN") {
-        if (profile.role === "HOSPITAL") {
-          navigate("/gestion-hopital", { replace: true });
-        } else {
-          navigate("/tableau-de-bord-donneur", { replace: true });
-        }
+        navigate(getDashboardPathForUser(profile), { replace: true });
         return;
       }
 
       setCurrentUserInStorage(profile);
+      const dashboardData = await getCntsDashboard(token);
       setDashboard(dashboardData);
     } catch (caughtError) {
       if (caughtError instanceof ApiError && caughtError.status === 401) {
