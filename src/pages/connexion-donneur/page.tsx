@@ -4,13 +4,14 @@ import { getCurrentUser, getGoogleAuthorizationUrl, loginDonor } from "../../ser
 import { setAccessToken, setCurrentUserInStorage } from "../../services/auth-storage";
 import { ApiError } from "../../services/http-client";
 import type { UserDto } from "../../types/auth";
+import { isCntsUser } from "../../utils/cnts";
 
-function getDashboardPathForRole(role: UserDto["role"]): string {
-  if (role === "ADMIN") {
-    return "/administration";
+function getDashboardPathForUser(user: Pick<UserDto, "email" | "role">): string {
+  if (user.role === "ADMIN" || isCntsUser(user)) {
+    return "/cnts";
   }
 
-  if (role === "HOSPITAL") {
+  if (user.role === "HOSPITAL") {
     return "/gestion-hopital";
   }
 
@@ -72,7 +73,7 @@ export default function ConnexionDonneur() {
         setAccessToken(oauthToken);
         const user = await getCurrentUser(oauthToken);
         setCurrentUserInStorage(user);
-        navigate(getDashboardPathForRole(user.role), { replace: true });
+        navigate(getDashboardPathForUser(user), { replace: true });
       } catch (caughtError) {
         setError(caughtError instanceof ApiError ? caughtError.message : "Connexion OAuth2 échouée");
       } finally {
@@ -104,7 +105,7 @@ export default function ConnexionDonneur() {
 
       setAccessToken(response.accessToken);
       setCurrentUserInStorage(response.user);
-      navigate(getDashboardPathForRole(response.user.role));
+      navigate(getDashboardPathForUser(response.user));
     } catch (caughtError) {
       setError(caughtError instanceof ApiError ? caughtError.message : "Impossible de se connecter");
     } finally {
@@ -163,7 +164,7 @@ export default function ConnexionDonneur() {
             <i className="ri-user-line text-4xl text-white"></i>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Connexion</h1>
-          <p className="text-lg text-gray-600">Donneur, hôpital, administration</p>
+          <p className="text-lg text-gray-600">Donneur, hôpital, CNTS</p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl p-8">

@@ -11,6 +11,7 @@ import {
 import { ApiError } from "../../services/http-client";
 import type { UserDto } from "../../types/auth";
 import type { DonorDashboardDto } from "../../types/dashboard";
+import { isCntsUser } from "../../utils/cnts";
 
 const EMERGENCY_REFRESH_INTERVAL_MS = 15_000;
 
@@ -126,13 +127,13 @@ export default function TableauDeBordDonneur() {
         ]);
 
         if (profile.role !== "DONOR") {
-          if (profile.role === "ADMIN") {
-            navigate("/administration", { replace: true });
+          if (profile.role === "HOSPITAL") {
+            navigate(isCntsUser(profile) ? "/cnts" : "/gestion-hopital", { replace: true });
             return;
           }
 
-          if (profile.role === "HOSPITAL") {
-            navigate("/gestion-hopital", { replace: true });
+          if (profile.role === "ADMIN") {
+            navigate("/cnts", { replace: true });
             return;
           }
         }

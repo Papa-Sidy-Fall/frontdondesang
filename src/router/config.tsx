@@ -1,5 +1,4 @@
-
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import Home from "../pages/home/page";
 import Inscription from "../pages/inscription/page";
@@ -45,6 +44,10 @@ const routes: RouteObject[] = [
   },
   {
     path: "/administration",
+    element: <Navigate to="/cnts" replace />,
+  },
+  {
+    path: "/cnts",
     element: <Administration />,
   },
   {

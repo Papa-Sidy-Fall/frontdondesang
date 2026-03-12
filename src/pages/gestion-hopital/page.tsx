@@ -10,6 +10,7 @@ import {
 import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../services/auth-storage";
 import { ApiError } from "../../services/http-client";
 import type { HospitalDashboardDto } from "../../types/dashboard";
+import { isCntsUser } from "../../utils/cnts";
 
 interface Stock {
   groupeSanguin: string;
@@ -49,6 +50,7 @@ export default function GestionHopital() {
   const navigate = useNavigate();
   const DONORS_PER_PAGE = 5;
   const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences" | "donneurs">("stocks");
+  const [canAccessCntsDashboard, setCanAccessCntsDashboard] = useState(false);
   const [donorPage, setDonorPage] = useState(1);
   const [donorCniQuery, setDonorCniQuery] = useState("");
   const [appointmentCniQuery, setAppointmentCniQuery] = useState("");
@@ -93,9 +95,11 @@ export default function GestionHopital() {
         getHospitalDashboard(token),
       ]);
 
+      setCanAccessCntsDashboard(isCntsUser(profile));
+
       if (profile.role !== "HOSPITAL") {
         if (profile.role === "ADMIN") {
-          navigate("/administration", { replace: true });
+          navigate("/cnts", { replace: true });
         } else {
           navigate("/tableau-de-bord-donneur", { replace: true });
         }
@@ -400,9 +404,11 @@ export default function GestionHopital() {
               >
                 Changer mot de passe
               </button>
-              <Link to="/administration" className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap">
-                Administration
-              </Link>
+              {canAccessCntsDashboard && (
+                <Link to="/cnts" className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap">
+                  Dashboard CNTS
+                </Link>
+              )}
               <button onClick={handleLogout} className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer">
                 <i className="ri-logout-box-line text-xl mr-2"></i>
                 Déconnexion

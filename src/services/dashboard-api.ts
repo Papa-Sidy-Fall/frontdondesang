@@ -52,26 +52,26 @@ export function resolveHospitalEmergency(token: string, emergencyId: string): Pr
   });
 }
 
-export function getAdminDashboard(token: string): Promise<AdminDashboardDto> {
-  return httpRequest<AdminDashboardDto>("/api/v1/dashboards/admin", {
+export function getCntsDashboard(token: string): Promise<AdminDashboardDto> {
+  return httpRequest<AdminDashboardDto>("/api/v1/dashboards/cnts", {
     method: "GET",
     token,
   });
 }
 
-export function createCampaign(
+export function createCntsCampaign(
   token: string,
   payload: CreateCampaignRequestDto
 ): Promise<{ message: string }> {
-  return httpRequest<{ message: string }>("/api/v1/admin/campaigns", {
+  return httpRequest<{ message: string }>("/api/v1/cnts/campaigns", {
     method: "POST",
     token,
     body: JSON.stringify(payload),
   });
 }
 
-export function deleteCampaign(token: string, campaignId: string): Promise<void> {
-  return httpRequest<void>(`/api/v1/admin/campaigns/${campaignId}`, {
+export function deleteCntsCampaign(token: string, campaignId: string): Promise<void> {
+  return httpRequest<void>(`/api/v1/cnts/campaigns/${campaignId}`, {
     method: "DELETE",
     token,
   });

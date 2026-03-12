@@ -32,7 +32,7 @@ export default function GestionStocksPage() {
       setError("");
 
       const profile = await getCurrentUser(token);
-      if (!["ADMIN", "HOSPITAL"].includes(profile.role)) {
+      if (profile.role !== "HOSPITAL") {
         navigate("/tableau-de-bord-donneur", { replace: true });
         return;
       }

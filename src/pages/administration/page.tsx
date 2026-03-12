@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { changePassword, getCurrentUser } from "../../services/auth-api";
-import { createCampaign, deleteCampaign, getAdminDashboard } from "../../services/dashboard-api";
+import { createCntsCampaign, deleteCntsCampaign, getCntsDashboard } from "../../services/dashboard-api";
 import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../services/auth-storage";
 import { ApiError } from "../../services/http-client";
 import type { AdminDashboardDto } from "../../types/dashboard";
+import { isCntsUser } from "../../utils/cnts";
 
 interface Statistique {
   label: string;
@@ -39,7 +40,7 @@ function getStatutLabel(statut: "active" | "terminee" | "planifiee") {
 export default function Administration() {
   const navigate = useNavigate();
   const DONORS_PER_PAGE = 5;
-  const [activeTab, setActiveTab] = useState<"statistiques" | "campagnes" | "utilisateurs">("statistiques");
+  const [activeTab, setActiveTab] = useState<"statistiques" | "campagnes" | "utilisateurs" | "reseau">("statistiques");
   const [adminDonorPage, setAdminDonorPage] = useState(1);
   const [showCampagneModal, setShowCampagneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -82,10 +83,10 @@ export default function Administration() {
 
       const [profile, dashboardData] = await Promise.all([
         getCurrentUser(token),
-        getAdminDashboard(token),
+        getCntsDashboard(token),
       ]);
 
-      if (profile.role !== "ADMIN") {
+      if (!isCntsUser(profile) && profile.role !== "ADMIN") {
         if (profile.role === "HOSPITAL") {
           navigate("/gestion-hopital", { replace: true });
         } else {
@@ -181,7 +182,7 @@ export default function Administration() {
     setActionError("");
 
     try {
-      await createCampaign(token, {
+      await createCntsCampaign(token, {
         titre: campagneData.titre,
         description: campagneData.description,
         dateDebut: campagneData.dateDebut,
@@ -211,7 +212,7 @@ export default function Administration() {
     setActionError("");
 
     try {
-      await deleteCampaign(token, campaignId);
+      await deleteCntsCampaign(token, campaignId);
       await loadDashboard();
     } catch (caughtError) {
       setActionError(caughtError instanceof ApiError ? caughtError.message : "Suppression impossible");
@@ -311,7 +312,7 @@ export default function Administration() {
               </div>
               <div>
                 <div className="text-xl font-bold text-red-600">DonSang Sénégal</div>
-                <div className="text-xs text-gray-500">Administration CNTS</div>
+                <div className="text-xs text-gray-500">Coordination nationale CNTS</div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -354,7 +355,7 @@ export default function Administration() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord Administrateur</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord CNTS</h1>
           <p className="text-xl text-gray-600">Centre National de Transfusion Sanguine du Sénégal</p>
         </div>
 
@@ -391,6 +392,15 @@ export default function Administration() {
           >
             <i className="ri-team-line mr-2"></i>
             Utilisateurs
+          </button>
+          <button
+            onClick={() => setActiveTab("reseau")}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === "reseau" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <i className="ri-hospital-line mr-2"></i>
+            Réseau hôpitaux
           </button>
         </div>
 
@@ -555,7 +565,7 @@ export default function Administration() {
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <UserMiniCard icon="ri-user-heart-line" color="green" value={dashboard.utilisateurs.donneursActifs} label="Donneurs Actifs" />
               <UserMiniCard icon="ri-hospital-line" color="blue" value={dashboard.utilisateurs.hopitauxPartenaires} label="Hôpitaux Partenaires" />
-              <UserMiniCard icon="ri-admin-line" color="yellow" value={dashboard.utilisateurs.administrateurs} label="Administrateurs" />
+              <UserMiniCard icon="ri-government-line" color="yellow" value={dashboard.utilisateurs.coordinationNationale} label="Coordination CNTS" />
             </div>
 
             <div className="space-y-4">
@@ -672,6 +682,64 @@ export default function Administration() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "reseau" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl shadow-xl p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Stocks des autres hôpitaux</h2>
+              <p className="text-gray-600">
+                Vue consolidée en temps réel du réseau hospitalier pour anticiper les tensions et redistribuer les unités si nécessaire.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {dashboard.hopitauxStocks.map((hopital) => (
+                <div key={hopital.id} className="bg-white rounded-3xl shadow-xl p-8">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900">{hopital.nom}</h3>
+                      <p className="text-sm text-gray-600">{hopital.ville}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <span className="px-4 py-2 rounded-full bg-green-50 text-green-700 font-semibold">
+                        {hopital.totalUnites} unités
+                      </span>
+                      <span className="px-4 py-2 rounded-full bg-red-50 text-red-700 font-semibold">
+                        {hopital.groupesCritiques} groupes critiques
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-4 gap-4">
+                    {hopital.stocks.map((stock) => (
+                      <div key={`${hopital.id}-${stock.groupeSanguin}`} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                        <div className="font-bold text-lg text-gray-900">{stock.groupeSanguin}</div>
+                        <div className="text-sm text-gray-600">Quantité: {stock.quantite}</div>
+                        <div className="text-sm text-gray-600">Seuil: {stock.seuil}</div>
+                        <span
+                          className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                            stock.statut === "critique"
+                              ? "bg-red-100 text-red-700"
+                              : stock.statut === "faible"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {stock.statut}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {dashboard.hopitauxStocks.length === 0 && (
+                <div className="bg-white rounded-3xl shadow-xl p-8 text-gray-500">
+                  Aucun autre hôpital n'est encore disponible dans le réseau.
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -45,7 +45,7 @@ export default function MessageriePage() {
       return contacts;
     }
 
-    return contacts.filter((contact) => contact.role !== "DONOR");
+    return contacts.filter((contact) => contact.role === "HOSPITAL");
   }, [contacts, currentRole]);
 
   const loadBaseData = async () => {
@@ -250,7 +250,7 @@ export default function MessageriePage() {
               className="border border-gray-300 rounded-lg px-3 py-2"
             >
               <option value="">
-                {currentRole === "DONOR" ? "Hôpital / CNTS" : "Hôpital / CNTS / Admin"}
+                {currentRole === "DONOR" ? "Hôpital / CNTS" : "Hôpital / CNTS"}
               </option>
               {selectableContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
