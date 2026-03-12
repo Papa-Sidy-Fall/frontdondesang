@@ -7,10 +7,17 @@ import {
   getMessageContacts,
   sendConversationMessage,
 } from "../../services/message-api";
-import { clearSession, getAccessToken } from "../../services/auth-storage";
+import {
+  clearSession,
+  getAccessToken,
+  getCurrentUserFromStorage,
+  setCurrentUserInStorage,
+} from "../../services/auth-storage";
 import { getCurrentUser } from "../../services/auth-api";
 import { ApiError } from "../../services/http-client";
+import type { UserDto } from "../../types/auth";
 import type { ConversationDto, ConversationMessageDto, MessageContactDto } from "../../types/message";
+import { getDashboardPathForUser } from "../../utils/dashboard-path";
 
 interface DirectMessageNavigationState {
   prefillContact?: MessageContactDto;
@@ -24,6 +31,9 @@ export default function MessageriePage() {
   const [contacts, setContacts] = useState<MessageContactDto[]>([]);
   const [conversations, setConversations] = useState<ConversationDto[]>([]);
   const [currentRole, setCurrentRole] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<Pick<UserDto, "email" | "role"> | null>(
+    getCurrentUserFromStorage()
+  );
   const [selectedConversationId, setSelectedConversationId] = useState<string>("");
   const [messages, setMessages] = useState<ConversationMessageDto[]>([]);
   const [messageBody, setMessageBody] = useState("");
@@ -61,6 +71,8 @@ export default function MessageriePage() {
       setError("");
 
       const profile = await getCurrentUser(token);
+      setCurrentUser(profile);
+      setCurrentUserInStorage(profile);
       setCurrentRole(profile.role);
 
       const [contactsResponse, conversationsResponse] = await Promise.all([
@@ -219,13 +231,22 @@ export default function MessageriePage() {
     }
   };
 
+  const handleBack = () => {
+    if (currentUser) {
+      navigate(getDashboardPathForUser(currentUser));
+      return;
+    }
+
+    navigate("/connexion-donneur", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-4 space-y-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 sm:w-auto"
           >
             Retour

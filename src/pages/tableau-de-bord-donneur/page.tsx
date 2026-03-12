@@ -13,7 +13,7 @@ import {
 import { ApiError } from "../../services/http-client";
 import type { UserDto } from "../../types/auth";
 import type { DonorDashboardDto } from "../../types/dashboard";
-import { isCntsUser } from "../../utils/cnts";
+import { getDashboardPathForUser } from "../../utils/dashboard-path";
 
 const EMERGENCY_REFRESH_INTERVAL_MS = 15_000;
 
@@ -124,21 +124,11 @@ export default function TableauDeBordDonneur() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [profile, dashboardData] = await Promise.all([
-          getCurrentUser(token),
-          getDonorDashboard(token),
-        ]);
+        const profile = await getCurrentUser(token);
 
         if (profile.role !== "DONOR") {
-          if (profile.role === "HOSPITAL") {
-            navigate(isCntsUser(profile) ? "/cnts" : "/gestion-hopital", { replace: true });
-            return;
-          }
-
-          if (profile.role === "ADMIN") {
-            navigate("/cnts", { replace: true });
-            return;
-          }
+          navigate(getDashboardPathForUser(profile), { replace: true });
+          return;
         }
 
         if (isDisposed) {
@@ -147,6 +137,12 @@ export default function TableauDeBordDonneur() {
 
         setCurrentUserInStorage(profile);
         setUser(profile);
+        const dashboardData = await getDonorDashboard(token);
+
+        if (isDisposed) {
+          return;
+        }
+
         setNewUrgenciesCount(0);
         applyUrgencySync(dashboardData, false);
       } catch (caughtError) {
