@@ -324,8 +324,8 @@ export default function Administration() {
   return (
     <div className="min-h-screen bg-green-50">
       <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 flex items-center justify-center bg-red-600 rounded-xl">
                 <i className="ri-drop-fill text-2xl text-white"></i>
@@ -335,18 +335,20 @@ export default function Administration() {
                 <div className="text-xs text-gray-500">Coordination nationale CNTS</div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:justify-end">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-message-3-line"></i>
                 Messagerie
                 <NotificationBadge count={unreadMessagesCount} />
               </button>
               <button
                 onClick={() => navigate("/gestion-stocks")}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-stack-line"></i>
                 Stocks CNTS
               </button>
               <button
@@ -355,18 +357,20 @@ export default function Administration() {
                   setPasswordSuccess("");
                   setShowPasswordModal(true);
                 }}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-lock-password-line"></i>
                 Changer mot de passe
               </button>
-              <Link to="/gestion-hopital" className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap">
+              <Link to="/gestion-hopital" className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600">
+                <i className="ri-hospital-line"></i>
                 Gestion Hôpital
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-green-600"
               >
-                <i className="ri-logout-box-line text-xl mr-2"></i>
+                <i className="ri-logout-box-line text-xl"></i>
                 Déconnexion
               </button>
             </div>
@@ -374,10 +378,10 @@ export default function Administration() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord CNTS</h1>
-          <p className="text-xl text-gray-600">Centre National de Transfusion Sanguine du Sénégal</p>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 sm:text-4xl">Tableau de Bord CNTS</h1>
+          <p className="text-base text-gray-600 sm:text-xl">Centre National de Transfusion Sanguine du Sénégal</p>
         </div>
 
         {actionError && (
@@ -386,8 +390,9 @@ export default function Administration() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 inline-flex gap-2">
-          <button
+        <div className="mb-8 overflow-x-auto rounded-2xl bg-white p-2 shadow-lg">
+          <div className="flex min-w-max gap-2">
+            <button
             onClick={() => setActiveTab("statistiques")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "statistiques" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -395,8 +400,8 @@ export default function Administration() {
           >
             <i className="ri-bar-chart-line mr-2"></i>
             Statistiques
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("campagnes")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "campagnes" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -404,8 +409,8 @@ export default function Administration() {
           >
             <i className="ri-megaphone-line mr-2"></i>
             Campagnes
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("utilisateurs")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "utilisateurs" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -413,8 +418,8 @@ export default function Administration() {
           >
             <i className="ri-team-line mr-2"></i>
             Utilisateurs
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("reseau")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "reseau" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -422,12 +427,13 @@ export default function Administration() {
           >
             <i className="ri-hospital-line mr-2"></i>
             Réseau hôpitaux
-          </button>
+            </button>
+          </div>
         </div>
 
         {activeTab === "statistiques" && (
           <div className="space-y-8">
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {statistiques.map((stat) => (
                 <div key={stat.label} className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100">
                   <div className="flex items-center justify-between mb-4">
@@ -445,7 +451,7 @@ export default function Administration() {
               ))}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="bg-white rounded-3xl shadow-xl p-8">
                 <h3 className="text-xl font-bold text-gray-900 mb-6">Évolution des Dons</h3>
                 <div className="space-y-4">
@@ -484,7 +490,7 @@ export default function Administration() {
 
             <div className="bg-white rounded-3xl shadow-xl p-8">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Statistiques par Région</h3>
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {dashboard.regions.map((region) => (
                   <div key={region.region} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
                     <div className="flex items-center gap-3 mb-4">
@@ -516,11 +522,11 @@ export default function Administration() {
 
         {activeTab === "campagnes" && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Gestion des Campagnes</h2>
               <button
                 onClick={() => setShowCampagneModal(true)}
-                className="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
               >
                 <i className="ri-add-line mr-2"></i>
                 Nouvelle Campagne
@@ -529,17 +535,17 @@ export default function Administration() {
 
             <div className="space-y-6">
               {dashboard.campagnes.map((campagne) => (
-                <div key={campagne.id} className="bg-white rounded-3xl shadow-xl p-8">
-                  <div className="flex items-start justify-between mb-4 gap-4">
+                <div key={campagne.id} className="bg-white rounded-3xl p-6 shadow-xl sm:p-8">
+                  <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                         <h3 className="text-2xl font-bold text-gray-900">{campagne.titre}</h3>
                         <span className={`px-4 py-1 rounded-full text-sm font-semibold ${getStatutColor(campagne.statut)}`}>
                           {getStatutLabel(campagne.statut)}
                         </span>
                       </div>
                       <p className="text-gray-600 mb-4">{campagne.description}</p>
-                      <div className="flex items-center gap-6 text-sm text-gray-600">
+                      <div className="flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
                         <span>
                           <i className="ri-calendar-line mr-2"></i>
                           {new Date(campagne.dateDebut).toLocaleDateString("fr-FR")} - {new Date(campagne.dateFin).toLocaleDateString("fr-FR")}
@@ -560,7 +566,7 @@ export default function Administration() {
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-6">
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="text-sm font-semibold text-gray-700">Progression</span>
                       <span className="text-sm text-gray-600">
                         {campagne.collecte} / {campagne.objectif} dons ({Math.round((campagne.collecte / Math.max(campagne.objectif, 1)) * 100)}%)
@@ -583,7 +589,7 @@ export default function Administration() {
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Utilisateurs</h2>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
               <UserMiniCard icon="ri-user-heart-line" color="green" value={dashboard.utilisateurs.donneursActifs} label="Donneurs Actifs" />
               <UserMiniCard icon="ri-hospital-line" color="blue" value={dashboard.utilisateurs.hopitauxPartenaires} label="Hôpitaux Partenaires" />
               <UserMiniCard icon="ri-government-line" color="yellow" value={dashboard.utilisateurs.coordinationNationale} label="Coordination CNTS" />
@@ -592,15 +598,15 @@ export default function Administration() {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-gray-900">Derniers Donneurs Inscrits</h3>
               {paginatedDonors.map((user) => (
-                <div key={user.id} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                <div key={user.id} className="rounded-2xl border-2 border-gray-100 p-6 transition-colors hover:border-green-200">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex items-start gap-4">
                       <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-xl">
                         <i className="ri-user-line text-2xl text-green-600"></i>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-bold text-lg text-gray-900">{user.nom}</div>
-                        <div className="text-sm text-gray-600">{user.email}</div>
+                        <div className="text-sm text-gray-600 break-all">{user.email}</div>
                         <div className="text-sm text-gray-600 mt-1">
                           <i className="ri-phone-line mr-1"></i>
                           {user.telephone}
@@ -611,17 +617,17 @@ export default function Administration() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
                       <button
                         type="button"
                         onClick={() => openDonorMessaging(user)}
-                        className="h-11 w-11 rounded-xl border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700 transition-colors"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-colors hover:border-green-300 hover:text-green-700"
                         title={`Envoyer un message a ${user.nom}`}
                       >
                         <i className="ri-message-3-line text-xl"></i>
                       </button>
                     </div>
-                    <div className="flex items-center gap-6 text-sm">
+                    <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3 xl:grid-cols-5">
                       <div className="text-center">
                         <div className="font-bold text-gray-900">{user.groupe}</div>
                         <div className="text-gray-600">Groupe</div>
@@ -656,7 +662,7 @@ export default function Administration() {
             </div>
 
             {donorDetails.length > DONORS_PER_PAGE && (
-              <div className="mt-6 flex items-center justify-between">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-gray-600">
                   Page {adminDonorPage} / {donorTotalPages}
                 </p>
@@ -683,7 +689,7 @@ export default function Administration() {
 
             <div className="mt-8">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Stock CNTS</h3>
-              <div className="grid md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {dashboard.cntsStocks.map((stock) => (
                   <div key={stock.groupeSanguin} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <div className="font-bold text-lg text-gray-900">{stock.groupeSanguin}</div>
@@ -734,7 +740,7 @@ export default function Administration() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {hopital.stocks.map((stock) => (
                       <div key={`${hopital.id}-${stock.groupeSanguin}`} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                         <div className="font-bold text-lg text-gray-900">{stock.groupeSanguin}</div>
@@ -762,7 +768,7 @@ export default function Administration() {
                 </div>
               )}
               {networkHospitals.length > NETWORK_HOSPITALS_PER_PAGE && (
-                <div className="bg-white rounded-3xl shadow-xl p-6 flex items-center justify-between">
+                <div className="bg-white rounded-3xl p-6 shadow-xl flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-gray-600">
                     Page {networkHospitalPage} / {networkHospitalTotalPages}
                   </p>
@@ -883,7 +889,7 @@ export default function Administration() {
                 />
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => setShowCampagneModal(false)}

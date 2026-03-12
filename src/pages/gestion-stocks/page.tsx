@@ -78,10 +78,10 @@ export default function GestionStocksPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="max-w-5xl mx-auto p-4 space-y-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Gestion manuelle des stocks</h1>
-          <button onClick={() => navigate(-1)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+          <button onClick={() => navigate(-1)} className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 sm:w-auto">
             Retour
           </button>
         </div>
@@ -129,8 +129,8 @@ export default function GestionStocksPage() {
           </form>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+          <table className="min-w-[520px] w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
                 <th className="text-left px-3 py-2">Groupe</th>
