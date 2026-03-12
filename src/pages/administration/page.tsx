@@ -259,6 +259,26 @@ export default function Administration() {
     navigate("/connexion-donneur", { replace: true });
   };
 
+  const openDonorMessaging = (donor: {
+    id: string;
+    nom: string;
+    email: string;
+    ville: string;
+  }) => {
+    navigate(`/messagerie?contactId=${donor.id}`, {
+      state: {
+        prefillContact: {
+          id: donor.id,
+          nom: donor.nom,
+          email: donor.email,
+          role: "DONOR",
+          hospitalName: null,
+          ville: donor.ville,
+        },
+      },
+    });
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-green-50 flex items-center justify-center">Chargement...</div>;
   }
@@ -559,6 +579,16 @@ export default function Administration() {
                           CNI: {user.cni}
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => openDonorMessaging(user)}
+                        className="h-11 w-11 rounded-xl border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700 transition-colors"
+                        title={`Envoyer un message a ${user.nom}`}
+                      >
+                        <i className="ri-message-3-line text-xl"></i>
+                      </button>
                     </div>
                     <div className="flex items-center gap-6 text-sm">
                       <div className="text-center">

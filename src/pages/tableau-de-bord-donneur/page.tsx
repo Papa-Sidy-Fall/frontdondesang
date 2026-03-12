@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { changePassword, getCurrentUser } from "../../services/auth-api";
 import { getDonorDashboard } from "../../services/dashboard-api";
@@ -11,6 +11,8 @@ import {
 import { ApiError } from "../../services/http-client";
 import type { UserDto } from "../../types/auth";
 import type { DonorDashboardDto } from "../../types/dashboard";
+
+const EMERGENCY_REFRESH_INTERVAL_MS = 15_000;
 
 function formatDate(value?: string | null): string {
   if (!value) {
@@ -38,6 +40,28 @@ function formatDateTime(value?: string | null): string {
   return parsed.toLocaleString("fr-FR");
 }
 
+function getEmergencyPriorityLabel(priority: string): string {
+  switch (priority) {
+    case "CRITICAL":
+      return "Critique";
+    case "HIGH":
+      return "Urgent";
+    default:
+      return "Actif";
+  }
+}
+
+function getEmergencyPriorityClass(priority: string): string {
+  switch (priority) {
+    case "CRITICAL":
+      return "bg-red-600 text-white";
+    case "HIGH":
+      return "bg-orange-500 text-white";
+    default:
+      return "bg-yellow-100 text-yellow-800";
+  }
+}
+
 export default function TableauDeBordDonneur() {
   const navigate = useNavigate();
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -48,6 +72,9 @@ export default function TableauDeBordDonneur() {
   const [dashboard, setDashboard] = useState<DonorDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUrgencySyncAt, setLastUrgencySyncAt] = useState<string | null>(null);
+  const [newUrgenciesCount, setNewUrgenciesCount] = useState(0);
+  const knownUrgencyIdsRef = useRef<Set<string>>(new Set());
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -65,6 +92,30 @@ export default function TableauDeBordDonneur() {
       navigate("/connexion-donneur", { replace: true });
       return;
     }
+
+    let isDisposed = false;
+
+    const applyUrgencySync = (dashboardData: DonorDashboardDto, detectNewUrgencies: boolean) => {
+      const nextUrgencyIds = new Set(dashboardData.urgences.map((urgence) => urgence.id));
+
+      if (detectNewUrgencies && knownUrgencyIdsRef.current.size > 0) {
+        let newCount = 0;
+
+        nextUrgencyIds.forEach((urgencyId) => {
+          if (!knownUrgencyIdsRef.current.has(urgencyId)) {
+            newCount += 1;
+          }
+        });
+
+        if (newCount > 0) {
+          setNewUrgenciesCount((previous) => previous + newCount);
+        }
+      }
+
+      knownUrgencyIdsRef.current = nextUrgencyIds;
+      setDashboard(dashboardData);
+      setLastUrgencySyncAt(new Date().toISOString());
+    };
 
     const fetchData = async () => {
       try {
@@ -86,10 +137,19 @@ export default function TableauDeBordDonneur() {
           }
         }
 
+        if (isDisposed) {
+          return;
+        }
+
         setCurrentUserInStorage(profile);
         setUser(profile);
-        setDashboard(dashboardData);
+        setNewUrgenciesCount(0);
+        applyUrgencySync(dashboardData, false);
       } catch (caughtError) {
+        if (isDisposed) {
+          return;
+        }
+
         if (caughtError instanceof ApiError && caughtError.status === 401) {
           clearSession();
           navigate("/connexion-donneur", { replace: true });
@@ -98,11 +158,64 @@ export default function TableauDeBordDonneur() {
 
         setError(caughtError instanceof ApiError ? caughtError.message : "Session invalide");
       } finally {
-        setLoading(false);
+        if (!isDisposed) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const refreshUrgencies = async () => {
+      const currentToken = getAccessToken();
+
+      if (!currentToken || isDisposed) {
+        return;
+      }
+
+      try {
+        const dashboardData = await getDonorDashboard(currentToken);
+
+        if (isDisposed) {
+          return;
+        }
+
+        applyUrgencySync(dashboardData, true);
+      } catch (caughtError) {
+        if (isDisposed) {
+          return;
+        }
+
+        if (caughtError instanceof ApiError && caughtError.status === 401) {
+          clearSession();
+          navigate("/connexion-donneur", { replace: true });
+        }
       }
     };
 
     void fetchData();
+
+    const intervalId = window.setInterval(() => {
+      void refreshUrgencies();
+    }, EMERGENCY_REFRESH_INTERVAL_MS);
+
+    const handleFocus = () => {
+      void refreshUrgencies();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshUrgencies();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [navigate]);
 
   const handleLogout = () => {
@@ -438,24 +551,54 @@ export default function TableauDeBordDonneur() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i className="ri-alarm-warning-line text-red-600"></i>
-                Besoins urgents
-              </h3>
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i className="ri-alarm-warning-line text-red-600"></i>
+                    Besoins urgents
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Mise a jour automatique toutes les 15 secondes
+                    {lastUrgencySyncAt ? ` • Derniere sync: ${formatDateTime(lastUrgencySyncAt)}` : ""}
+                  </p>
+                </div>
+                {newUrgenciesCount > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
+                    {newUrgenciesCount} nouvelle{newUrgenciesCount > 1 ? "s" : ""} urgence{newUrgenciesCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
                 {dashboard.urgences.map((urgence) => (
                   <div key={urgence.id} className="bg-red-50 rounded-lg p-4 border border-red-200">
-                    <div className="flex items-start justify-between mb-2 gap-3">
-                      <h4 className="font-semibold text-gray-900">{urgence.hopital}</h4>
-                      <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold whitespace-nowrap">
-                        {urgence.groupe}
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{urgence.hopital}</h4>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Signalee le {formatDateTime(urgence.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold whitespace-nowrap">
+                          {urgence.groupe}
+                        </span>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${getEmergencyPriorityClass(urgence.priorite)}`}>
+                          {getEmergencyPriorityLabel(urgence.priorite)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 mb-1">{urgence.besoin}</p>
+                    <p className="text-sm text-gray-700 mb-3">{urgence.description}</p>
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                      <span>
+                        <i className="ri-map-pin-line mr-1"></i>
+                        {urgence.distance}
+                      </span>
+                      <span>
+                        <i className="ri-flask-line mr-1"></i>
+                        {urgence.quantite} poche{urgence.quantite > 1 ? "s" : ""} demandee{urgence.quantite > 1 ? "s" : ""}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-1">{urgence.besoin}</p>
-                    <p className="text-sm text-gray-600">
-                      <i className="ri-map-pin-line mr-1"></i>
-                      {urgence.distance}
-                    </p>
                   </div>
                 ))}
                 {dashboard.urgences.length === 0 && (

@@ -45,6 +45,13 @@ export function createEmergencyAlert(
   });
 }
 
+export function resolveHospitalEmergency(token: string, emergencyId: string): Promise<void> {
+  return httpRequest<void>(`/api/v1/hospital/emergencies/${emergencyId}/resolve`, {
+    method: "PATCH",
+    token,
+  });
+}
+
 export function getAdminDashboard(token: string): Promise<AdminDashboardDto> {
   return httpRequest<AdminDashboardDto>("/api/v1/dashboards/admin", {
     method: "GET",

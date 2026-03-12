@@ -38,6 +38,10 @@ export interface DonorDashboardDto {
     groupe: string;
     besoin: string;
     distance: string;
+    description: string;
+    quantite: number;
+    priorite: string;
+    createdAt: string;
   }>;
   campagnes: Array<{
     id: string;
@@ -82,6 +86,7 @@ export interface HospitalDashboardDto {
     description: string;
     niveauLabel: string;
     niveauColor: "red" | "yellow" | "green";
+    statut: "active" | "resolue";
     createdAtLabel: string;
     notifiedDonors: number;
     positiveResponses: number;

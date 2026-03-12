@@ -4,6 +4,7 @@ import { changePassword, getCurrentUser } from "../../services/auth-api";
 import {
   createEmergencyAlert,
   getHospitalDashboard,
+  resolveHospitalEmergency,
   updateHospitalAppointmentStatus,
 } from "../../services/dashboard-api";
 import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../services/auth-storage";
@@ -265,6 +266,26 @@ export default function GestionHopital() {
     }
   };
 
+  const handleResolveEmergency = async (emergencyId: string) => {
+    const token = getAccessToken();
+    if (!token) {
+      navigate("/connexion-donneur", { replace: true });
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError("");
+
+    try {
+      await resolveHospitalEmergency(token, emergencyId);
+      await loadDashboard();
+    } catch (caughtError) {
+      setActionError(caughtError instanceof ApiError ? caughtError.message : "Cloture de l'urgence impossible");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handlePasswordChange = async (event: React.FormEvent) => {
     event.preventDefault();
     setPasswordError("");
@@ -302,6 +323,26 @@ export default function GestionHopital() {
   const handleLogout = () => {
     clearSession();
     navigate("/connexion-donneur", { replace: true });
+  };
+
+  const openDonorMessaging = (donor: {
+    id: string;
+    nom: string;
+    email: string;
+    ville: string;
+  }) => {
+    navigate(`/messagerie?contactId=${donor.id}`, {
+      state: {
+        prefillContact: {
+          id: donor.id,
+          nom: donor.nom,
+          email: donor.email,
+          role: "DONOR",
+          hospitalName: null,
+          ville: donor.ville,
+        },
+      },
+    });
   };
 
   if (loading) {
@@ -564,6 +605,15 @@ export default function GestionHopital() {
                         <span className={`px-3 py-1 text-white rounded-full text-sm font-semibold ${getUrgenceBadgeClass(urgence.niveauColor)}`}>
                           {urgence.niveauLabel}
                         </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            urgence.statut === "active"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {urgence.statut === "active" ? "Active" : "Resolue"}
+                        </span>
                         <span className="text-sm text-gray-600">
                           <i className="ri-user-line mr-1"></i>{urgence.notifiedDonors} donneurs notifiés
                         </span>
@@ -574,6 +624,18 @@ export default function GestionHopital() {
                           <i className="ri-drop-line mr-1"></i>{urgence.donationsCompleted} dons effectués
                         </span>
                       </div>
+                      {urgence.statut === "active" && (
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            onClick={() => void handleResolveEmergency(urgence.id)}
+                            disabled={actionLoading}
+                            className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+                          >
+                            Marquer comme resolue
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -644,6 +706,16 @@ export default function GestionHopital() {
                           CNI: {donneur.cni}
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => openDonorMessaging(donneur)}
+                        className="h-11 w-11 rounded-xl border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700 transition-colors"
+                        title={`Envoyer un message a ${donneur.nom}`}
+                      >
+                        <i className="ri-message-3-line text-xl"></i>
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <InfoTile label="Groupe" value={donneur.groupeSanguin} />
