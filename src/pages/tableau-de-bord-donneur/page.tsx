@@ -1,66 +1,319 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { changePassword, getCurrentUser } from "../../services/auth-api";
+import { getDonorDashboard } from "../../services/dashboard-api";
+import { NotificationBadge } from "../../components/notification-badge";
+import { useMessageUnreadCount } from "../../hooks/use-message-unread-count";
+import {
+  clearSession,
+  getAccessToken,
+  getCurrentUserFromStorage,
+  setCurrentUserInStorage,
+} from "../../services/auth-storage";
+import { ApiError } from "../../services/http-client";
+import type { UserDto } from "../../types/auth";
+import type { DonorDashboardDto } from "../../types/dashboard";
+import { isCntsUser } from "../../utils/cnts";
+
+const EMERGENCY_REFRESH_INTERVAL_MS = 15_000;
+
+function formatDate(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString("fr-FR");
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString("fr-FR");
+}
+
+function getEmergencyPriorityLabel(priority: string): string {
+  switch (priority) {
+    case "CRITICAL":
+      return "Critique";
+    case "HIGH":
+      return "Urgent";
+    default:
+      return "Actif";
+  }
+}
+
+function getEmergencyPriorityClass(priority: string): string {
+  switch (priority) {
+    case "CRITICAL":
+      return "bg-red-600 text-white";
+    case "HIGH":
+      return "bg-orange-500 text-white";
+    default:
+      return "bg-yellow-100 text-yellow-800";
+  }
+}
 
 export default function TableauDeBordDonneur() {
   const navigate = useNavigate();
+  const unreadMessagesCount = useMessageUnreadCount(Boolean(getAccessToken()));
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  // Données du donneur
-  const donorProfile = {
-    nom: "Amadou Diallo",
-    email: "amadou.diallo@email.com",
-    telephone: "+221 77 123 45 67",
-    groupeSanguin: "O+",
-    dateNaissance: "15/03/1990",
-    adresse: "Dakar, Sénégal",
-    dernierDon: "15/11/2024",
-    prochainDonPossible: "15/02/2025",
-    totalDons: 12,
-    viesSauvees: 36
+  const [user, setUser] = useState<UserDto | null>(getCurrentUserFromStorage());
+  const [dashboard, setDashboard] = useState<DonorDashboardDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [lastUrgencySyncAt, setLastUrgencySyncAt] = useState<string | null>(null);
+  const [newUrgenciesCount, setNewUrgenciesCount] = useState(0);
+  const knownUrgencyIdsRef = useRef<Set<string>>(new Set());
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    if (!token) {
+      navigate("/connexion-donneur", { replace: true });
+      return;
+    }
+
+    let isDisposed = false;
+
+    const applyUrgencySync = (dashboardData: DonorDashboardDto, detectNewUrgencies: boolean) => {
+      const nextUrgencyIds = new Set(dashboardData.urgences.map((urgence) => urgence.id));
+
+      if (detectNewUrgencies && knownUrgencyIdsRef.current.size > 0) {
+        let newCount = 0;
+
+        nextUrgencyIds.forEach((urgencyId) => {
+          if (!knownUrgencyIdsRef.current.has(urgencyId)) {
+            newCount += 1;
+          }
+        });
+
+        if (newCount > 0) {
+          setNewUrgenciesCount((previous) => previous + newCount);
+        }
+      }
+
+      knownUrgencyIdsRef.current = nextUrgencyIds;
+      setDashboard(dashboardData);
+      setLastUrgencySyncAt(new Date().toISOString());
+    };
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [profile, dashboardData] = await Promise.all([
+          getCurrentUser(token),
+          getDonorDashboard(token),
+        ]);
+
+        if (profile.role !== "DONOR") {
+          if (profile.role === "HOSPITAL") {
+            navigate(isCntsUser(profile) ? "/cnts" : "/gestion-hopital", { replace: true });
+            return;
+          }
+
+          if (profile.role === "ADMIN") {
+            navigate("/cnts", { replace: true });
+            return;
+          }
+        }
+
+        if (isDisposed) {
+          return;
+        }
+
+        setCurrentUserInStorage(profile);
+        setUser(profile);
+        setNewUrgenciesCount(0);
+        applyUrgencySync(dashboardData, false);
+      } catch (caughtError) {
+        if (isDisposed) {
+          return;
+        }
+
+        if (caughtError instanceof ApiError && caughtError.status === 401) {
+          clearSession();
+          navigate("/connexion-donneur", { replace: true });
+          return;
+        }
+
+        setError(caughtError instanceof ApiError ? caughtError.message : "Session invalide");
+      } finally {
+        if (!isDisposed) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const refreshUrgencies = async () => {
+      const currentToken = getAccessToken();
+
+      if (!currentToken || isDisposed) {
+        return;
+      }
+
+      try {
+        const dashboardData = await getDonorDashboard(currentToken);
+
+        if (isDisposed) {
+          return;
+        }
+
+        applyUrgencySync(dashboardData, true);
+      } catch (caughtError) {
+        if (isDisposed) {
+          return;
+        }
+
+        if (caughtError instanceof ApiError && caughtError.status === 401) {
+          clearSession();
+          navigate("/connexion-donneur", { replace: true });
+        }
+      }
+    };
+
+    void fetchData();
+
+    const intervalId = window.setInterval(() => {
+      void refreshUrgencies();
+    }, EMERGENCY_REFRESH_INTERVAL_MS);
+
+    const handleFocus = () => {
+      void refreshUrgencies();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshUrgencies();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [navigate]);
+
+  const handleLogout = () => {
+    clearSession();
+    navigate("/connexion-donneur", { replace: true });
   };
 
-  const historiqueDons = [
-    { id: 1, date: "15/01/2025", centre: "CNTS Dakar", type: "Don de sang total", statut: "Complété" },
-    { id: 2, date: "10/10/2024", centre: "Hôpital Principal", type: "Don de sang total", statut: "Complété" },
-    { id: 3, date: "05/07/2024", centre: "CNTS Dakar", type: "Don de plaquettes", statut: "Complété" },
-    { id: 4, date: "20/04/2024", centre: "Hôpital Le Dantec", type: "Don de sang total", statut: "Complété" },
-    { id: 5, date: "15/01/2024", centre: "CNTS Dakar", type: "Don de sang total", statut: "Complété" }
-  ];
+  const handlePasswordChange = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
 
-  const prochainRdv = [
-    { id: 1, date: "25/02/2025", heure: "10:00", centre: "CNTS Dakar", type: "Don de sang total" }
-  ];
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas.");
+      return;
+    }
 
-  const badges = [
-    { nom: "Premier Don", icon: "🩸", obtenu: true },
-    { nom: "5 Dons", icon: "⭐", obtenu: true },
-    { nom: "10 Dons", icon: "🏆", obtenu: true },
-    { nom: "Donneur Régulier", icon: "💪", obtenu: true },
-    { nom: "20 Dons", icon: "🎖️", obtenu: false },
-    { nom: "Héros du Sang", icon: "👑", obtenu: false }
-  ];
+    const token = getAccessToken();
+    if (!token) {
+      setPasswordError("Session expirée.");
+      return;
+    }
 
-  const urgences = [
-    { id: 1, hopital: "Hôpital Principal", groupe: "O-", besoin: "Urgent", distance: "2.5 km" },
-    { id: 2, hopital: "Hôpital Le Dantec", groupe: "O+", besoin: "Critique", distance: "4.1 km" }
-  ];
+    setPasswordLoading(true);
 
-  const campagnes = [
-    { id: 1, titre: "Journée Mondiale du Donneur", date: "14/06/2025", lieu: "Place de l'Indépendance" },
-    { id: 2, titre: "Collecte Mobile Université", date: "28/02/2025", lieu: "UCAD Dakar" }
-  ];
+    try {
+      await changePassword(token, {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
 
-  // Calcul correct des jours restants
-  const dernierDonDate = new Date("2024-11-15");
-  const aujourdhui = new Date();
-  const joursDepuisDernierDon = Math.floor((aujourdhui.getTime() - dernierDonDate.getTime()) / (1000 * 60 * 60 * 24));
-  const joursRestants = Math.max(0, 90 - joursDepuisDernierDon);
-  const pourcentageProgression = Math.min(100, (joursDepuisDernierDon / 90) * 100);
+      setPasswordSuccess("Mot de passe modifié avec succès.");
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setTimeout(() => setShowPasswordModal(false), 800);
+    } catch (caughtError) {
+      setPasswordError(
+        caughtError instanceof ApiError ? caughtError.message : "Impossible de modifier le mot de passe"
+      );
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const stats = useMemo(() => {
+    const lastDonation = dashboard?.profile.dernierDon;
+
+    if (!lastDonation) {
+      return {
+        daysRemaining: 0,
+        progress: 100,
+      };
+    }
+
+    const lastDate = new Date(lastDonation);
+    if (Number.isNaN(lastDate.getTime())) {
+      return {
+        daysRemaining: 0,
+        progress: 100,
+      };
+    }
+
+    const daysSince = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      daysRemaining: Math.max(0, 90 - daysSince),
+      progress: Math.min(100, (daysSince / 90) * 100),
+    };
+  }, [dashboard?.profile.dernierDon]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center text-gray-600">
+        Chargement du tableau de bord...
+      </div>
+    );
+  }
+
+  if (error || !user || !dashboard) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center px-6">
+        <div className="max-w-md bg-white shadow rounded-xl p-6 text-center space-y-4">
+          <h2 className="text-xl font-bold text-gray-900">Session expirée</h2>
+          <p className="text-gray-600">{error || "Veuillez vous reconnecter."}</p>
+          <Link to="/connexion-donneur" className="inline-block bg-red-600 text-white px-5 py-2 rounded-lg">
+            Revenir à la connexion
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const donorProfile = dashboard.profile;
 
   return (
     <div className="min-h-screen bg-red-50">
-      {/* Navigation */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -73,29 +326,63 @@ export default function TableauDeBordDonneur() {
                 <div className="text-xs text-gray-500">Espace Donneur</div>
               </div>
             </div>
-            <button
-              onClick={() => setShowProfileModal(true)}
-              className="flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-            >
-              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">{donorProfile.nom.split(' ').map(n => n[0]).join('')}</span>
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-sm font-semibold text-gray-900">{donorProfile.nom}</p>
-                <p className="text-xs text-gray-500">{donorProfile.groupeSanguin}</p>
-              </div>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/messagerie")}
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Messagerie
+                <NotificationBadge count={unreadMessagesCount} />
+              </button>
+              <button
+                onClick={() => {
+                  setPasswordError("");
+                  setPasswordSuccess("");
+                  setShowPasswordModal(true);
+                }}
+                className="hidden sm:inline-flex px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Mot de passe
+              </button>
+              <button
+                onClick={handleLogout}
+                className="hidden sm:inline-flex px-3 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm"
+              >
+                Déconnexion
+              </button>
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {donorProfile.nom
+                      .split(" ")
+                      .filter(Boolean)
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className="text-sm font-semibold text-gray-900">{donorProfile.nom}</p>
+                  <p className="text-xs text-gray-500">{donorProfile.groupeSanguin}</p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Bannière de bienvenue */}
         <div className="bg-red-600 rounded-2xl p-8 mb-8 text-white">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Bienvenue, {donorProfile.nom.split(' ')[0]} ! 👋</h2>
-              <p className="text-white/90 text-lg">Merci pour votre engagement. Vous avez sauvé {donorProfile.viesSauvees} vies !</p>
+              <h2 className="text-3xl font-bold mb-2">Bienvenue, {donorProfile.nom.split(" ")[0]} !</h2>
+              <p className="text-white/90 text-lg">
+                Merci pour votre engagement. Vous avez sauvé {donorProfile.viesSauvees} vies.
+              </p>
             </div>
             <button
               onClick={() => setShowAppointmentModal(true)}
@@ -107,76 +394,41 @@ export default function TableauDeBordDonneur() {
           </div>
         </div>
 
-        {/* Statistiques principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <i className="ri-drop-fill text-2xl text-red-600"></i>
-              </div>
-              <span className="text-2xl">🩸</span>
-            </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-1">{donorProfile.totalDons}</h3>
-            <p className="text-sm text-gray-500">Dons effectués</p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-heart-pulse-fill text-2xl text-green-600"></i>
-              </div>
-              <span className="text-2xl">💚</span>
-            </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-1">{donorProfile.viesSauvees}</h3>
-            <p className="text-sm text-gray-500">Vies sauvées</p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <i className="ri-calendar-line text-2xl text-yellow-600"></i>
-              </div>
-              <span className="text-2xl">📅</span>
-            </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-1">{joursRestants}</h3>
-            <p className="text-sm text-gray-500">Jours avant prochain don</p>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-trophy-fill text-2xl text-orange-600"></i>
-              </div>
-              <span className="text-2xl">🏆</span>
-            </div>
-            <h3 className="text-3xl font-bold text-gray-900 mb-1">{badges.filter(b => b.obtenu).length}/{badges.length}</h3>
-            <p className="text-sm text-gray-500">Badges obtenus</p>
-          </div>
+          <StatCard icon="ri-drop-fill" color="red" emoji="🩸" value={donorProfile.totalDons} label="Dons effectués" />
+          <StatCard icon="ri-heart-pulse-fill" color="green" emoji="💚" value={donorProfile.viesSauvees} label="Vies sauvées" />
+          <StatCard icon="ri-calendar-line" color="yellow" emoji="📅" value={stats.daysRemaining} label="Jours avant prochain don" />
+          <StatCard
+            icon="ri-trophy-fill"
+            color="orange"
+            emoji="🏆"
+            value={`${dashboard.badges.filter((badge) => badge.obtenu).length}/${dashboard.badges.length}`}
+            label="Badges obtenus"
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Colonne principale */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Éligibilité au don */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i className="ri-calendar-check-line text-red-600"></i>
                 Éligibilité au don
               </h3>
-              {joursRestants > 0 ? (
+              {stats.daysRemaining > 0 ? (
                 <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <i className="ri-time-line text-2xl text-white"></i>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-2">Prochain don possible dans {joursRestants} jours</h4>
-                      <p className="text-sm text-gray-600 mb-3">Dernier don : {donorProfile.dernierDon}</p>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        Prochain don possible dans {stats.daysRemaining} jours
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Dernier don : {formatDate(donorProfile.dernierDon)}
+                      </p>
                       <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                        <div 
-                          className="bg-yellow-500 h-3 rounded-full transition-all"
-                          style={{ width: `${pourcentageProgression}%` }}
-                        ></div>
+                        <div className="bg-yellow-500 h-3 rounded-full transition-all" style={{ width: `${stats.progress}%` }}></div>
                       </div>
                       <p className="text-xs text-gray-500">Délai réglementaire : 90 jours entre deux dons</p>
                     </div>
@@ -189,8 +441,8 @@ export default function TableauDeBordDonneur() {
                       <i className="ri-check-line text-2xl text-white"></i>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-2">Vous êtes éligible pour donner !</h4>
-                      <p className="text-sm text-gray-600 mb-3">Dernier don : {donorProfile.dernierDon}</p>
+                      <h4 className="font-semibold text-gray-900 mb-2">Vous êtes éligible pour donner</h4>
+                      <p className="text-sm text-gray-600 mb-3">Dernier don : {formatDate(donorProfile.dernierDon)}</p>
                       <button
                         onClick={() => setShowAppointmentModal(true)}
                         className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap cursor-pointer"
@@ -204,17 +456,16 @@ export default function TableauDeBordDonneur() {
               )}
             </div>
 
-            {/* Prochains rendez-vous */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i className="ri-calendar-event-line text-red-600"></i>
                 Prochains rendez-vous
               </h3>
-              {prochainRdv.length > 0 ? (
+              {dashboard.prochainsRendezVous.length > 0 ? (
                 <div className="space-y-3">
-                  {prochainRdv.map(rdv => (
+                  {dashboard.prochainsRendezVous.map((rdv) => (
                     <div key={rdv.id} className="bg-green-50 rounded-lg p-4 border border-green-200">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                             <i className="ri-calendar-check-fill text-2xl text-white"></i>
@@ -224,13 +475,13 @@ export default function TableauDeBordDonneur() {
                             <p className="text-sm text-gray-600">{rdv.type}</p>
                             <p className="text-sm text-green-600 font-medium mt-1">
                               <i className="ri-time-line mr-1"></i>
-                              {rdv.date} à {rdv.heure}
+                              {formatDate(rdv.date)} à {rdv.heure}
                             </p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-white text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium whitespace-nowrap cursor-pointer">
-                          Modifier
-                        </button>
+                        <span className="px-3 py-1 bg-white text-green-700 border border-green-300 rounded-full text-xs font-medium">
+                          {rdv.statut}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -249,14 +500,13 @@ export default function TableauDeBordDonneur() {
               )}
             </div>
 
-            {/* Historique des dons */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i className="ri-history-line text-red-600"></i>
                 Historique des dons
               </h3>
               <div className="space-y-3">
-                {historiqueDons.map(don => (
+                {dashboard.historiqueDons.map((don) => (
                   <div key={don.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
@@ -268,33 +518,34 @@ export default function TableauDeBordDonneur() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">{don.date}</p>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(don.date)}</p>
                       <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium mt-1">
                         {don.statut}
                       </span>
                     </div>
                   </div>
                 ))}
+                {dashboard.historiqueDons.length === 0 && (
+                  <p className="text-sm text-gray-500">Aucun don enregistré pour le moment.</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Colonne latérale */}
           <div className="space-y-8">
-            {/* Badges et récompenses */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i className="ri-medal-line text-red-600"></i>
                 Badges
               </h3>
               <div className="grid grid-cols-3 gap-3">
-                {badges.map((badge, index) => (
+                {dashboard.badges.map((badge) => (
                   <div
-                    key={index}
+                    key={badge.nom}
                     className={`text-center p-3 rounded-lg transition-all ${
                       badge.obtenu
-                        ? 'bg-yellow-50 border-2 border-yellow-300'
-                        : 'bg-gray-50 border border-gray-200 opacity-50'
+                        ? "bg-yellow-50 border-2 border-yellow-300"
+                        : "bg-gray-50 border border-gray-200 opacity-50"
                     }`}
                   >
                     <div className="text-3xl mb-2">{badge.icon}</div>
@@ -304,47 +555,76 @@ export default function TableauDeBordDonneur() {
               </div>
             </div>
 
-            {/* Urgences */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <i className="ri-alarm-warning-line text-red-600"></i>
-                Besoins urgents
-              </h3>
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i className="ri-alarm-warning-line text-red-600"></i>
+                    Besoins urgents
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Mise a jour automatique toutes les 15 secondes
+                    {lastUrgencySyncAt ? ` • Derniere sync: ${formatDateTime(lastUrgencySyncAt)}` : ""}
+                  </p>
+                </div>
+                {newUrgenciesCount > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
+                    {newUrgenciesCount} nouvelle{newUrgenciesCount > 1 ? "s" : ""} urgence{newUrgenciesCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
-                {urgences.map(urgence => (
+                {dashboard.urgences.map((urgence) => (
                   <div key={urgence.id} className="bg-red-50 rounded-lg p-4 border border-red-200">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900">{urgence.hopital}</h4>
-                      <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold whitespace-nowrap">
-                        {urgence.groupe}
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{urgence.hopital}</h4>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Signalee le {formatDateTime(urgence.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold whitespace-nowrap">
+                          {urgence.groupe}
+                        </span>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${getEmergencyPriorityClass(urgence.priorite)}`}>
+                          {getEmergencyPriorityLabel(urgence.priorite)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 mb-1">{urgence.besoin}</p>
+                    <p className="text-sm text-gray-700 mb-3">{urgence.description}</p>
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                      <span>
+                        <i className="ri-map-pin-line mr-1"></i>
+                        {urgence.distance}
+                      </span>
+                      <span>
+                        <i className="ri-flask-line mr-1"></i>
+                        {urgence.quantite} poche{urgence.quantite > 1 ? "s" : ""} demandee{urgence.quantite > 1 ? "s" : ""}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      <i className="ri-map-pin-line mr-1"></i>
-                      {urgence.distance}
-                    </p>
-                    <button className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap cursor-pointer">
-                      <i className="ri-phone-line mr-2"></i>
-                      Répondre à l'urgence
-                    </button>
                   </div>
                 ))}
+                {dashboard.urgences.length === 0 && (
+                  <p className="text-sm text-gray-500">Aucune urgence active actuellement.</p>
+                )}
               </div>
             </div>
 
-            {/* Campagnes */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <i className="ri-megaphone-line text-red-600"></i>
                 Campagnes
               </h3>
               <div className="space-y-3">
-                {campagnes.map(campagne => (
+                {dashboard.campagnes.map((campagne) => (
                   <div key={campagne.id} className="bg-green-50 rounded-lg p-4 border border-green-200">
                     <h4 className="font-semibold text-gray-900 mb-2">{campagne.titre}</h4>
+                    <p className="text-sm text-gray-700 mb-2">{campagne.description}</p>
                     <p className="text-sm text-gray-600 mb-1">
                       <i className="ri-calendar-line mr-1"></i>
-                      {campagne.date}
+                      {formatDate(campagne.date)} - {formatDate(campagne.dateFin)}
                     </p>
                     <p className="text-sm text-gray-600">
                       <i className="ri-map-pin-line mr-1"></i>
@@ -352,13 +632,15 @@ export default function TableauDeBordDonneur() {
                     </p>
                   </div>
                 ))}
+                {dashboard.campagnes.length === 0 && (
+                  <p className="text-sm text-gray-500">Aucune campagne active.</p>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal Profil */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -376,46 +658,121 @@ export default function TableauDeBordDonneur() {
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-2xl">{donorProfile.nom.split(' ').map(n => n[0]).join('')}</span>
+                  <span className="text-white font-bold text-2xl">
+                    {donorProfile.nom
+                      .split(" ")
+                      .filter(Boolean)
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
                 </div>
                 <div>
                   <h4 className="text-xl font-bold text-gray-900">{donorProfile.nom}</h4>
-                  <p className="text-gray-600">Donneur régulier</p>
+                  <p className="text-gray-600">Donneur</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-500 mb-1 block">Groupe sanguin</label>
-                    <p className="font-semibold text-gray-900">{donorProfile.groupeSanguin}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500 mb-1 block">Date de naissance</label>
-                    <p className="font-semibold text-gray-900">{donorProfile.dateNaissance}</p>
-                  </div>
+                  <Info label="Groupe sanguin" value={donorProfile.groupeSanguin} />
+                  <Info label="Date de naissance" value={formatDate(donorProfile.dateNaissance)} />
                 </div>
-                <div>
-                  <label className="text-sm text-gray-500 mb-1 block">Email</label>
-                  <p className="font-semibold text-gray-900">{donorProfile.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500 mb-1 block">Téléphone</label>
-                  <p className="font-semibold text-gray-900">{donorProfile.telephone}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500 mb-1 block">Adresse</label>
-                  <p className="font-semibold text-gray-900">{donorProfile.adresse}</p>
-                </div>
+                <Info label="Email" value={donorProfile.email} />
+                <Info label="Téléphone" value={donorProfile.telephone} />
+                <Info label="Adresse" value={donorProfile.adresse} />
+                <Info label="Compte créé" value={formatDateTime(user.createdAt)} />
+                <Info label="Dernière mise à jour" value={formatDateTime(user.updatedAt)} />
               </div>
-              <button className="w-full mt-6 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium whitespace-nowrap cursor-pointer">
-                Modifier mes informations
-              </button>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    setShowProfileModal(false);
+                    setShowPasswordModal(true);
+                  }}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium whitespace-nowrap cursor-pointer"
+                >
+                  Changer mot de passe
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium whitespace-nowrap cursor-pointer"
+                >
+                  Déconnexion
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Rendez-vous */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Changer le mot de passe</h3>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <i className="ri-close-line text-2xl text-gray-500"></i>
+              </button>
+            </div>
+            <form onSubmit={handlePasswordChange} className="p-6 space-y-4">
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <input
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(event) =>
+                  setPasswordData((prev) => ({ ...prev, currentPassword: event.target.value }))
+                }
+                required
+                placeholder="Mot de passe actuel"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(event) => setPasswordData((prev) => ({ ...prev, newPassword: event.target.value }))}
+                required
+                minLength={8}
+                placeholder="Nouveau mot de passe"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(event) =>
+                  setPasswordData((prev) => ({ ...prev, confirmPassword: event.target.value }))
+                }
+                required
+                minLength={8}
+                placeholder="Confirmer le nouveau mot de passe"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none"
+              />
+
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50"
+              >
+                {passwordLoading ? "Mise à jour..." : "Mettre à jour"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showAppointmentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -435,7 +792,7 @@ export default function TableauDeBordDonneur() {
               <button
                 onClick={() => {
                   setShowAppointmentModal(false);
-                  navigate('/recherche');
+                  navigate("/recherche");
                 }}
                 className="w-full px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium whitespace-nowrap cursor-pointer"
               >
@@ -446,55 +803,49 @@ export default function TableauDeBordDonneur() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                  <i className="ri-heart-pulse-fill text-xl text-white"></i>
-                </div>
-                <span className="font-bold text-lg">DonSang Sénégal</span>
-              </div>
-              <p className="text-gray-400 text-sm">Ensemble, sauvons des vies par le don de sang.</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Navigation</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="/" className="hover:text-white transition-colors cursor-pointer">Accueil</a></li>
-                <li><a href="/recherche" className="hover:text-white transition-colors cursor-pointer">Recherche</a></li>
-                <li><a href="/inscription" className="hover:text-white transition-colors cursor-pointer">Inscription</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><i className="ri-phone-line mr-2"></i>+221 33 123 45 67</li>
-                <li><i className="ri-mail-line mr-2"></i>contact@donsang.sn</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Suivez-nous</h4>
-              <div className="flex gap-3">
-                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-red-600 rounded-lg flex items-center justify-center transition-colors cursor-pointer">
-                  <i className="ri-facebook-fill text-xl"></i>
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-red-600 rounded-lg flex items-center justify-center transition-colors cursor-pointer">
-                  <i className="ri-twitter-fill text-xl"></i>
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 hover:bg-red-600 rounded-lg flex items-center justify-center transition-colors cursor-pointer">
-                  <i className="ri-instagram-fill text-xl"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2025 DonSang Sénégal. Tous droits réservés.</p>
-          </div>
+function StatCard({
+  icon,
+  color,
+  emoji,
+  value,
+  label,
+}: {
+  icon: string;
+  color: "red" | "green" | "yellow" | "orange";
+  emoji: string;
+  value: string | number;
+  label: string;
+}) {
+  const colorClasses: Record<string, string> = {
+    red: "bg-red-100 text-red-600",
+    green: "bg-green-100 text-green-600",
+    yellow: "bg-yellow-100 text-yellow-600",
+    orange: "bg-orange-100 text-orange-600",
+  };
+
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+          <i className={`${icon} text-2xl`}></i>
         </div>
-      </footer>
+        <span className="text-2xl">{emoji}</span>
+      </div>
+      <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
+      <p className="text-sm text-gray-500">{label}</p>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="text-sm text-gray-500 mb-1 block">{label}</label>
+      <p className="font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

@@ -23,6 +23,9 @@ export default function Home() {
               <a href="#apropos" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">À propos</a>
               <a href="#comment" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">Comment ça marche</a>
               <a href="#temoignages" className="text-gray-700 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap">Témoignages</a>
+              <Link to="/connexion-donneur" className="border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors cursor-pointer whitespace-nowrap">
+                Se connecter
+              </Link>
               <Link to="/inscription" className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap">
                 Devenir Donneur
               </Link>
@@ -68,8 +71,15 @@ export default function Home() {
               >
                 Témoignages
               </a>
-              <Link 
-                to="/inscription" 
+              <Link
+                to="/connexion-donneur"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors cursor-pointer text-center whitespace-nowrap"
+              >
+                Se connecter
+              </Link>
+              <Link
+                to="/inscription"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors cursor-pointer text-center whitespace-nowrap"
               >
@@ -398,16 +408,16 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link to="/administration" className="group bg-yellow-50 rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 border-2 border-yellow-100 hover:border-yellow-300 cursor-pointer">
+            <Link to="/connexion-donneur" className="group bg-yellow-50 rounded-3xl p-8 hover:shadow-2xl transition-all duration-300 border-2 border-yellow-100 hover:border-yellow-300 cursor-pointer">
               <div className="w-16 h-16 flex items-center justify-center bg-yellow-600 rounded-2xl mb-6 group-hover:scale-110 transition-transform">
                 <i className="ri-dashboard-line text-3xl text-white"></i>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Administration</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">Pour le CNTS</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                Supervisez toutes les opérations, générez des statistiques détaillées et organisez des campagnes de sensibilisation efficaces.
+                Pilotez les campagnes nationales, surveillez les stocks des hôpitaux en temps réel et coordonnez l'ensemble du réseau de transfusion.
               </p>
               <div className="flex items-center text-yellow-600 font-semibold group-hover:gap-3 gap-2 transition-all">
-                Tableau de bord
+                Se connecter
                 <i className="ri-arrow-right-line"></i>
               </div>
             </Link>
@@ -502,7 +512,7 @@ export default function Home() {
                 <li><Link to="/inscription" className="text-white/80 hover:text-white transition-colors cursor-pointer">Inscription Donneur</Link></li>
                 <li><Link to="/recherche" className="text-white/80 hover:text-white transition-colors cursor-pointer">Recherche Centre</Link></li>
                 <li><Link to="/gestion-hopital" className="text-white/80 hover:text-white transition-colors cursor-pointer">Gestion Hôpital</Link></li>
-                <li><Link to="/administration" className="text-white/80 hover:text-white transition-colors cursor-pointer">Administration</Link></li>
+                <li><Link to="/connexion-donneur" className="text-white/80 hover:text-white transition-colors cursor-pointer">CNTS</Link></li>
               </ul>
             </div>
 
