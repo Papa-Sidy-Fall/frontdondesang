@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { changePassword, getCurrentUser } from "../../services/auth-api";
 import { getDonorDashboard } from "../../services/dashboard-api";
+import { NotificationBadge } from "../../components/notification-badge";
+import { useMessageUnreadCount } from "../../hooks/use-message-unread-count";
 import {
   clearSession,
   getAccessToken,
@@ -65,6 +67,7 @@ function getEmergencyPriorityClass(priority: string): string {
 
 export default function TableauDeBordDonneur() {
   const navigate = useNavigate();
+  const unreadMessagesCount = useMessageUnreadCount(Boolean(getAccessToken()));
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -326,9 +329,10 @@ export default function TableauDeBordDonneur() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="hidden sm:inline-flex px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
               >
                 Messagerie
+                <NotificationBadge count={unreadMessagesCount} />
               </button>
               <button
                 onClick={() => {

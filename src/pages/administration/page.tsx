@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { changePassword, getCurrentUser } from "../../services/auth-api";
+import { NotificationBadge } from "../../components/notification-badge";
+import { useMessageUnreadCount } from "../../hooks/use-message-unread-count";
 import { createCntsCampaign, deleteCntsCampaign, getCntsDashboard } from "../../services/dashboard-api";
 import { clearSession, getAccessToken, setCurrentUserInStorage } from "../../services/auth-storage";
 import { ApiError } from "../../services/http-client";
@@ -39,9 +41,12 @@ function getStatutLabel(statut: "active" | "terminee" | "planifiee") {
 
 export default function Administration() {
   const navigate = useNavigate();
+  const unreadMessagesCount = useMessageUnreadCount(Boolean(getAccessToken()));
   const DONORS_PER_PAGE = 5;
+  const NETWORK_HOSPITALS_PER_PAGE = 1;
   const [activeTab, setActiveTab] = useState<"statistiques" | "campagnes" | "utilisateurs" | "reseau">("statistiques");
   const [adminDonorPage, setAdminDonorPage] = useState(1);
+  const [networkHospitalPage, setNetworkHospitalPage] = useState(1);
   const [showCampagneModal, setShowCampagneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
@@ -162,12 +167,27 @@ export default function Administration() {
     (adminDonorPage - 1) * DONORS_PER_PAGE,
     adminDonorPage * DONORS_PER_PAGE
   );
+  const networkHospitals = dashboard?.hopitauxStocks ?? [];
+  const networkHospitalTotalPages = Math.max(
+    1,
+    Math.ceil(networkHospitals.length / NETWORK_HOSPITALS_PER_PAGE)
+  );
+  const paginatedNetworkHospitals = networkHospitals.slice(
+    (networkHospitalPage - 1) * NETWORK_HOSPITALS_PER_PAGE,
+    networkHospitalPage * NETWORK_HOSPITALS_PER_PAGE
+  );
 
   useEffect(() => {
     if (adminDonorPage > donorTotalPages) {
       setAdminDonorPage(donorTotalPages);
     }
   }, [adminDonorPage, donorTotalPages]);
+
+  useEffect(() => {
+    if (networkHospitalPage > networkHospitalTotalPages) {
+      setNetworkHospitalPage(networkHospitalTotalPages);
+    }
+  }, [networkHospitalPage, networkHospitalTotalPages]);
 
   const handleCampagneSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -318,9 +338,10 @@ export default function Administration() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
               >
                 Messagerie
+                <NotificationBadge count={unreadMessagesCount} />
               </button>
               <button
                 onClick={() => navigate("/gestion-stocks")}
@@ -696,7 +717,7 @@ export default function Administration() {
             </div>
 
             <div className="space-y-6">
-              {dashboard.hopitauxStocks.map((hopital) => (
+              {paginatedNetworkHospitals.map((hopital) => (
                 <div key={hopital.id} className="bg-white rounded-3xl shadow-xl p-8">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                     <div>
@@ -735,9 +756,38 @@ export default function Administration() {
                   </div>
                 </div>
               ))}
-              {dashboard.hopitauxStocks.length === 0 && (
+              {networkHospitals.length === 0 && (
                 <div className="bg-white rounded-3xl shadow-xl p-8 text-gray-500">
                   Aucun autre hôpital n'est encore disponible dans le réseau.
+                </div>
+              )}
+              {networkHospitals.length > NETWORK_HOSPITALS_PER_PAGE && (
+                <div className="bg-white rounded-3xl shadow-xl p-6 flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Page {networkHospitalPage} / {networkHospitalTotalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNetworkHospitalPage((page) => Math.max(1, page - 1))}
+                      disabled={networkHospitalPage === 1}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                    >
+                      Précédent
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNetworkHospitalPage((page) =>
+                          Math.min(networkHospitalTotalPages, page + 1)
+                        )
+                      }
+                      disabled={networkHospitalPage === networkHospitalTotalPages}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 disabled:opacity-50"
+                    >
+                      Suivant
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

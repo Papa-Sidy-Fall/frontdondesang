@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { changePassword, getCurrentUser } from "../../services/auth-api";
+import { NotificationBadge } from "../../components/notification-badge";
+import { useMessageUnreadCount } from "../../hooks/use-message-unread-count";
 import {
   createEmergencyAlert,
   getHospitalDashboard,
@@ -32,6 +34,7 @@ interface RendezVous {
 
 type BloodType = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
 type EmergencyPriority = "CRITICAL" | "HIGH" | "MEDIUM";
+const HOSPITAL_REFRESH_INTERVAL_MS = 15_000;
 
 function toApiStatus(status: RendezVous["statut"]): "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" {
   switch (status) {
@@ -48,6 +51,7 @@ function toApiStatus(status: RendezVous["statut"]): "PENDING" | "CONFIRMED" | "C
 
 export default function GestionHopital() {
   const navigate = useNavigate();
+  const unreadMessagesCount = useMessageUnreadCount(Boolean(getAccessToken()));
   const DONORS_PER_PAGE = 5;
   const [activeTab, setActiveTab] = useState<"stocks" | "rendezous" | "urgences" | "donneurs">("stocks");
   const [canAccessCntsDashboard, setCanAccessCntsDashboard] = useState(false);
@@ -164,6 +168,65 @@ export default function GestionHopital() {
       },
     [dashboard]
   );
+  const pendingAppointmentsCount = useMemo(
+    () => rendezous.filter((rdv) => rdv.statut === "en-attente").length,
+    [rendezous]
+  );
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    if (!token) {
+      return;
+    }
+
+    let disposed = false;
+
+    const refreshDashboard = async () => {
+      try {
+        const dashboardData = await getHospitalDashboard(token);
+
+        if (disposed) {
+          return;
+        }
+
+        setDashboard(dashboardData);
+      } catch (caughtError) {
+        if (disposed) {
+          return;
+        }
+
+        if (caughtError instanceof ApiError && caughtError.status === 401) {
+          clearSession();
+          navigate("/connexion-donneur", { replace: true });
+        }
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshDashboard();
+    }, HOSPITAL_REFRESH_INTERVAL_MS);
+
+    const handleFocus = () => {
+      void refreshDashboard();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshDashboard();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [navigate]);
 
   const getStatutColor = (statut: Stock["statut"]) => {
     switch (statut) {
@@ -384,9 +447,10 @@ export default function GestionHopital() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
               >
                 Messagerie
+                <NotificationBadge count={unreadMessagesCount} />
               </button>
               <button
                 onClick={() => navigate("/gestion-stocks")}
@@ -449,12 +513,13 @@ export default function GestionHopital() {
           </button>
           <button
             onClick={() => setActiveTab("rendezous")}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "rendezous" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
             }`}
           >
             <i className="ri-calendar-line mr-2"></i>
             Rendez-vous
+            <NotificationBadge count={pendingAppointmentsCount} />
           </button>
           <button
             onClick={() => setActiveTab("urgences")}

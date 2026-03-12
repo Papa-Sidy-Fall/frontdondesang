@@ -38,20 +38,27 @@ const initialFormState: FormState = {
 
 const NAME_REGEX = /^[A-Za-zÀ-ÿ' -]{2,100}$/;
 const CNI_REGEX = /^[A-Za-z0-9]{13}$/;
+const LOCAL_SENEGAL_PHONE_REGEX = /^\d{9}$/;
 
 function normalizeCni(value: string): string {
   return value.replace(/\s+/g, "").toUpperCase();
 }
 
-function normalizePhone(value: string): string {
+function sanitizePhoneInput(value: string): string {
   const digits = value.replace(/\D/g, "");
 
-  if (digits.length === 9) {
-    return `+221${digits}`;
+  if (digits.startsWith("221") && digits.length > 9) {
+    return digits.slice(3, 12);
   }
 
-  if (digits.length === 12 && digits.startsWith("221")) {
-    return `+${digits}`;
+  return digits.slice(0, 9);
+}
+
+function normalizePhone(value: string): string {
+  const digits = sanitizePhoneInput(value);
+
+  if (LOCAL_SENEGAL_PHONE_REGEX.test(digits)) {
+    return `+221${digits}`;
   }
 
   return "";
@@ -85,8 +92,8 @@ export default function Inscription() {
       errors.cni = "Le CNI doit contenir exactement 13 caractères (chiffres et/ou lettres).";
     }
 
-    if (!normalizePhone(formData.telephone)) {
-      errors.telephone = "Le numéro doit contenir 9 chiffres (avec ou sans préfixe +221).";
+    if (!LOCAL_SENEGAL_PHONE_REGEX.test(formData.telephone)) {
+      errors.telephone = "Le numéro doit contenir exactement 9 chiffres. Le préfixe +221 est ajouté automatiquement.";
     }
 
     if (formData.motDePasse.length < 8) {
@@ -166,7 +173,12 @@ export default function Inscription() {
     const { name, value, type } = event.target;
     setFormData((previousState) => ({
       ...previousState,
-      [name]: type === "checkbox" ? (event.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox"
+          ? (event.target as HTMLInputElement).checked
+          : name === "telephone"
+            ? sanitizePhoneInput(value)
+            : value,
     }));
     setFieldErrors((previous) => ({
       ...previous,
@@ -306,14 +318,22 @@ export default function Inscription() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    name="telephone"
-                    value={formData.telephone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors"
-                    placeholder="+221 77 123 45 67"
-                  />
+                  <div className="flex items-center overflow-hidden rounded-xl border-2 border-gray-200 focus-within:border-red-500 transition-colors">
+                    <span className="bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
+                      +221
+                    </span>
+                    <input
+                      type="tel"
+                      name="telephone"
+                      inputMode="numeric"
+                      maxLength={9}
+                      value={formData.telephone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 text-sm focus:outline-none"
+                      placeholder="771234567"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Saisissez seulement les 9 chiffres de votre numéro sénégalais.</p>
                   {fieldErrors.telephone && (
                     <p className="mt-1 text-sm text-red-600">{fieldErrors.telephone}</p>
                   )}
