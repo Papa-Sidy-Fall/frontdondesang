@@ -315,8 +315,8 @@ export default function TableauDeBordDonneur() {
   return (
     <div className="min-h-screen bg-red-50">
       <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 flex items-center justify-center bg-red-600 rounded-xl">
                 <i className="ri-drop-fill text-2xl text-white"></i>
@@ -326,11 +326,12 @@ export default function TableauDeBordDonneur() {
                 <div className="text-xs text-gray-500">Espace Donneur</div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+                className="inline-flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm hover:bg-gray-100"
               >
+                <i className="ri-message-3-line"></i>
                 Messagerie
                 <NotificationBadge count={unreadMessagesCount} />
               </button>
@@ -340,19 +341,21 @@ export default function TableauDeBordDonneur() {
                   setPasswordSuccess("");
                   setShowPasswordModal(true);
                 }}
-                className="hidden sm:inline-flex px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm"
+                className="inline-flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm hover:bg-gray-100"
               >
+                <i className="ri-lock-password-line"></i>
                 Mot de passe
               </button>
               <button
                 onClick={handleLogout}
-                className="hidden sm:inline-flex px-3 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm"
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700"
               >
+                <i className="ri-logout-box-line"></i>
                 Déconnexion
               </button>
               <button
                 onClick={() => setShowProfileModal(true)}
-                className="flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="flex w-full items-center justify-center gap-3 rounded-lg bg-gray-50 px-4 py-2 transition-colors hover:bg-gray-100 sm:w-auto sm:justify-start"
               >
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
@@ -365,7 +368,7 @@ export default function TableauDeBordDonneur() {
                       .toUpperCase()}
                   </span>
                 </div>
-                <div className="text-left hidden sm:block">
+                <div className="min-w-0 text-left">
                   <p className="text-sm font-semibold text-gray-900">{donorProfile.nom}</p>
                   <p className="text-xs text-gray-500">{donorProfile.groupeSanguin}</p>
                 </div>
@@ -376,17 +379,17 @@ export default function TableauDeBordDonneur() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-red-600 rounded-2xl p-8 mb-8 text-white">
+        <div className="mb-8 rounded-2xl bg-red-600 p-6 text-white sm:p-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Bienvenue, {donorProfile.nom.split(" ")[0]} !</h2>
+              <h2 className="mb-2 text-2xl font-bold sm:text-3xl">Bienvenue, {donorProfile.nom.split(" ")[0]} !</h2>
               <p className="text-white/90 text-lg">
                 Merci pour votre engagement. Vous avez sauvé {donorProfile.viesSauvees} vies.
               </p>
             </div>
             <button
               onClick={() => setShowAppointmentModal(true)}
-              className="px-8 py-4 bg-white text-red-600 rounded-xl font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
+              className="w-full rounded-xl bg-white px-8 py-4 font-semibold text-red-600 transition-all hover:shadow-xl sm:w-auto"
             >
               <i className="ri-calendar-check-line mr-2"></i>
               Prendre RDV
@@ -464,8 +467,8 @@ export default function TableauDeBordDonneur() {
               {dashboard.prochainsRendezVous.length > 0 ? (
                 <div className="space-y-3">
                   {dashboard.prochainsRendezVous.map((rdv) => (
-                    <div key={rdv.id} className="bg-green-50 rounded-lg p-4 border border-green-200">
-                      <div className="flex items-center justify-between gap-4">
+                    <div key={rdv.id} className="bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
                             <i className="ri-calendar-check-fill text-2xl text-white"></i>
@@ -479,7 +482,7 @@ export default function TableauDeBordDonneur() {
                             </p>
                           </div>
                         </div>
-                        <span className="px-3 py-1 bg-white text-green-700 border border-green-300 rounded-full text-xs font-medium">
+                        <span className="inline-flex w-fit px-3 py-1 bg-white text-green-700 border border-green-300 rounded-full text-xs font-medium">
                           {rdv.statut}
                         </span>
                       </div>
@@ -507,7 +510,7 @@ export default function TableauDeBordDonneur() {
               </h3>
               <div className="space-y-3">
                 {dashboard.historiqueDons.map((don) => (
-                  <div key={don.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div key={don.id} className="flex flex-col gap-4 rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                         <i className="ri-drop-fill text-xl text-red-600"></i>
@@ -517,7 +520,7 @@ export default function TableauDeBordDonneur() {
                         <p className="text-sm text-gray-600">{don.type}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className="text-sm font-medium text-gray-900">{formatDate(don.date)}</p>
                       <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium mt-1">
                         {don.statut}
@@ -538,7 +541,7 @@ export default function TableauDeBordDonneur() {
                 <i className="ri-medal-line text-red-600"></i>
                 Badges
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {dashboard.badges.map((badge) => (
                   <div
                     key={badge.nom}
@@ -556,7 +559,7 @@ export default function TableauDeBordDonneur() {
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <i className="ri-alarm-warning-line text-red-600"></i>
@@ -656,7 +659,7 @@ export default function TableauDeBordDonneur() {
               </div>
             </div>
             <div className="p-6">
-              <div className="flex items-center gap-4 mb-6">
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-2xl">
                     {donorProfile.nom
@@ -674,7 +677,7 @@ export default function TableauDeBordDonneur() {
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Info label="Groupe sanguin" value={donorProfile.groupeSanguin} />
                   <Info label="Date de naissance" value={formatDate(donorProfile.dateNaissance)} />
                 </div>
