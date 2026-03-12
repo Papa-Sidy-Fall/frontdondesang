@@ -433,8 +433,8 @@ export default function GestionHopital() {
   return (
     <div className="min-h-screen bg-green-50">
       <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 flex items-center justify-center bg-red-600 rounded-xl">
                 <i className="ri-drop-fill text-2xl text-white"></i>
@@ -444,18 +444,20 @@ export default function GestionHopital() {
                 <div className="text-xs text-gray-500">Gestion Hôpital</div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:justify-end">
               <button
                 onClick={() => navigate("/messagerie")}
-                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-message-3-line"></i>
                 Messagerie
                 <NotificationBadge count={unreadMessagesCount} />
               </button>
               <button
                 onClick={() => navigate("/gestion-stocks")}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-stack-line"></i>
                 Stocks manuels
               </button>
               <button
@@ -464,17 +466,19 @@ export default function GestionHopital() {
                   setPasswordSuccess("");
                   setShowPasswordModal(true);
                 }}
-                className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600"
               >
+                <i className="ri-lock-password-line"></i>
                 Changer mot de passe
               </button>
               {canAccessCntsDashboard && (
-                <Link to="/cnts" className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer whitespace-nowrap">
+                <Link to="/cnts" className="inline-flex items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-green-600">
+                  <i className="ri-bar-chart-box-line"></i>
                   Dashboard CNTS
                 </Link>
               )}
-              <button onClick={handleLogout} className="text-gray-600 hover:text-green-600 transition-colors cursor-pointer">
-                <i className="ri-logout-box-line text-xl mr-2"></i>
+              <button onClick={handleLogout} className="inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-green-600">
+                <i className="ri-logout-box-line text-xl"></i>
                 Déconnexion
               </button>
             </div>
@@ -482,10 +486,10 @@ export default function GestionHopital() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tableau de Bord Hôpital</h1>
-          <p className="text-xl text-gray-600">{dashboard.hospitalName}</p>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900 sm:text-4xl">Tableau de Bord Hôpital</h1>
+          <p className="text-base text-gray-600 sm:text-xl">{dashboard.hospitalName}</p>
         </div>
 
         {actionError && (
@@ -494,15 +498,16 @@ export default function GestionHopital() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard icon="ri-drop-line" color="green" value={summary.totalUnits} label="Unités en Stock" helper="Temps réel" />
           <SummaryCard icon="ri-calendar-check-line" color="yellow" value={summary.appointmentsToday} label="Rendez-vous" helper="Aujourd'hui" />
           <SummaryCard icon="ri-alert-line" color="red" value={summary.criticalGroups} label="Groupes Critiques" helper="Urgent" />
           <SummaryCard icon="ri-user-heart-line" color="blue" value={summary.activeDonors} label="Donneurs Actifs" helper="Ville" />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 inline-flex gap-2">
-          <button
+        <div className="mb-8 overflow-x-auto rounded-2xl bg-white p-2 shadow-lg">
+          <div className="flex min-w-max gap-2">
+            <button
             onClick={() => setActiveTab("stocks")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "stocks" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -510,8 +515,8 @@ export default function GestionHopital() {
           >
             <i className="ri-drop-line mr-2"></i>
             Stocks de Sang
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("rendezous")}
             className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "rendezous" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -520,8 +525,8 @@ export default function GestionHopital() {
             <i className="ri-calendar-line mr-2"></i>
             Rendez-vous
             <NotificationBadge count={pendingAppointmentsCount} />
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("urgences")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "urgences" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -529,8 +534,8 @@ export default function GestionHopital() {
           >
             <i className="ri-alarm-warning-line mr-2"></i>
             Urgences
-          </button>
-          <button
+            </button>
+            <button
             onClick={() => setActiveTab("donneurs")}
             className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "donneurs" ? "bg-green-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -538,23 +543,24 @@ export default function GestionHopital() {
           >
             <i className="ri-team-line mr-2"></i>
             Donneurs
-          </button>
+            </button>
+          </div>
         </div>
 
         {activeTab === "stocks" && (
-          <div className="bg-white rounded-3xl shadow-xl p-8">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Stocks de Sang par Groupe</h2>
               <button
                 onClick={() => setShowUrgenceModal(true)}
-                className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-red-700 sm:w-auto"
               >
                 <i className="ri-alarm-warning-line mr-2"></i>
                 Signaler Urgence
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {stocks.map((stock) => (
                 <div key={stock.groupeSanguin} className={`border-2 rounded-2xl p-6 ${getStatutColor(stock.statut)}`}>
                   <div className="flex items-center justify-between mb-4">
@@ -594,7 +600,7 @@ export default function GestionHopital() {
         )}
 
         {activeTab === "rendezous" && (
-          <div className="bg-white rounded-3xl shadow-xl p-8">
+          <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Rendez-vous</h2>
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Recherche par CNI</label>
@@ -602,16 +608,16 @@ export default function GestionHopital() {
                 type="text"
                 value={appointmentCniQuery}
                 onChange={(event) => setAppointmentCniQuery(event.target.value)}
-                className="w-full md:w-96 px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors sm:max-w-md"
                 placeholder="Ex: 123456789012A"
               />
             </div>
 
             <div className="space-y-4">
               {filteredRendezous.map((rdv) => (
-                <div key={rdv.id} className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1">
+                <div key={rdv.id} className="rounded-2xl border-2 border-gray-100 p-6 transition-colors hover:border-green-200">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-1 items-start gap-4">
                       <div className="w-14 h-14 flex items-center justify-center bg-green-100 rounded-xl">
                         <i className="ri-user-line text-2xl text-green-600"></i>
                       </div>
@@ -627,7 +633,7 @@ export default function GestionHopital() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
                       <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getRendezousStatutColor(rdv.statut)}`}>
                         {rdv.statut === "en-attente" && "En attente"}
                         {rdv.statut === "confirme" && "Confirmé"}
@@ -639,7 +645,7 @@ export default function GestionHopital() {
                         value={rdv.statut}
                         onChange={(event) => void handleStatutChange(rdv.id, event.target.value as RendezVous["statut"])}
                         disabled={actionLoading}
-                        className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold cursor-pointer hover:border-green-300 transition-colors disabled:opacity-50"
+                        className="w-full rounded-xl border-2 border-gray-200 px-4 py-2 text-sm font-semibold transition-colors hover:border-green-300 disabled:opacity-50 sm:w-auto"
                       >
                         <option value="en-attente">En attente</option>
                         <option value="confirme">Confirmé</option>
@@ -656,7 +662,7 @@ export default function GestionHopital() {
         )}
 
         {activeTab === "urgences" && (
-          <div className="bg-white rounded-3xl shadow-xl p-8">
+          <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Historique des Urgences</h2>
 
             <div className="space-y-4">
@@ -741,7 +747,7 @@ export default function GestionHopital() {
         )}
 
         {activeTab === "donneurs" && (
-          <div className="bg-white rounded-3xl shadow-xl p-8">
+          <div className="bg-white rounded-3xl p-6 shadow-xl sm:p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Gestion des Donneurs</h2>
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Recherche par CNI</label>
@@ -749,7 +755,7 @@ export default function GestionHopital() {
                 type="text"
                 value={donorCniQuery}
                 onChange={(event) => setDonorCniQuery(event.target.value)}
-                className="w-full md:w-96 px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors sm:max-w-md"
                 placeholder="Ex: 123456789012A"
               />
             </div>
@@ -758,16 +764,16 @@ export default function GestionHopital() {
               {paginatedDonors.map((donneur) => (
                 <div
                   key={donneur.id}
-                  className="border-2 border-gray-100 rounded-2xl p-6 hover:border-green-200 transition-colors"
+                  className="rounded-2xl border-2 border-gray-100 p-6 transition-colors hover:border-green-200"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="flex items-start gap-4">
                       <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-xl">
                         <i className="ri-user-line text-2xl text-green-600"></i>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-bold text-lg text-gray-900">{donneur.nom}</div>
-                        <div className="text-sm text-gray-600">{donneur.email}</div>
+                        <div className="text-sm text-gray-600 break-all">{donneur.email}</div>
                         <div className="text-sm text-gray-600 mt-1">
                           <i className="ri-phone-line mr-1"></i>
                           {donneur.telephone}
@@ -778,17 +784,17 @@ export default function GestionHopital() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
                       <button
                         type="button"
                         onClick={() => openDonorMessaging(donneur)}
-                        className="h-11 w-11 rounded-xl border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700 transition-colors"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-colors hover:border-green-300 hover:text-green-700"
                         title={`Envoyer un message a ${donneur.nom}`}
                       >
                         <i className="ri-message-3-line text-xl"></i>
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                       <InfoTile label="Groupe" value={donneur.groupeSanguin} />
                       <InfoTile label="Ville" value={donneur.ville} />
                       <InfoTile label="Quartier" value={donneur.quartier} />
@@ -814,7 +820,7 @@ export default function GestionHopital() {
             </div>
 
             {filteredDonors.length > DONORS_PER_PAGE && (
-              <div className="mt-6 flex items-center justify-between">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-gray-600">
                   Page {donorPage} / {donorTotalPages}
                 </p>

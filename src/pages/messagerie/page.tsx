@@ -221,12 +221,12 @@ export default function MessageriePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto p-4 space-y-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
           <button
             onClick={() => navigate(-1)}
-            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 sm:w-auto"
           >
             Retour
           </button>
@@ -271,7 +271,7 @@ export default function MessageriePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-3 lg:col-span-1 h-[70vh] overflow-auto">
+          <div className="bg-white border border-gray-200 rounded-xl p-3 lg:col-span-1 h-[280px] lg:h-[70vh] overflow-auto">
             <h2 className="font-semibold mb-3">Conversations</h2>
             {loading && <p className="text-sm text-gray-500">Chargement...</p>}
             {!loading && conversations.length === 0 && <p className="text-sm text-gray-500">Aucune conversation</p>}
@@ -298,7 +298,7 @@ export default function MessageriePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-3 lg:col-span-2 h-[70vh] flex flex-col">
+          <div className="bg-white border border-gray-200 rounded-xl p-3 lg:col-span-2 min-h-[420px] lg:h-[70vh] flex flex-col">
             <div className="border-b border-gray-200 pb-3 mb-3">
               <h2 className="font-semibold text-gray-900">
                 {selectedConversation?.subject ?? "Sélectionnez une conversation"}
@@ -319,7 +319,7 @@ export default function MessageriePage() {
               )}
             </div>
 
-            <form onSubmit={handleSendMessage} className="pt-3 border-t border-gray-200 mt-3 flex gap-2">
+            <form onSubmit={handleSendMessage} className="mt-3 flex flex-col gap-2 border-t border-gray-200 pt-3 sm:flex-row">
               <input
                 value={messageBody}
                 onChange={(event) => setMessageBody(event.target.value)}
@@ -329,7 +329,7 @@ export default function MessageriePage() {
               />
               <button
                 type="submit"
-                className="bg-red-600 text-white rounded-lg px-4 py-2 font-semibold disabled:opacity-50"
+                className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white disabled:opacity-50 sm:w-auto"
                 disabled={!selectedConversationId || !messageBody.trim()}
               >
                 Envoyer

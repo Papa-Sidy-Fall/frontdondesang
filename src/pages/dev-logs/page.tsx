@@ -82,14 +82,14 @@ export default function DevLogsPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <header className="flex flex-col gap-3 border-b border-gray-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <h1 className="text-xl font-bold">Dev Logs Console</h1>
         <Link to="/tableau-de-bord-donneur" className="text-sm text-gray-300 hover:text-white">
           Retour dashboard
         </Link>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4 sm:px-6">
         {!hasDevSession && (
           <form onSubmit={handleDevLogin} className="bg-gray-900 border border-gray-800 rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
@@ -183,8 +183,8 @@ export default function DevLogsPage() {
           </div>
         )}
 
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-auto">
-          <table className="w-full text-sm">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+          <table className="min-w-[760px] w-full text-sm">
             <thead className="bg-gray-800 text-gray-300">
               <tr>
                 <th className="text-left px-3 py-2">Timestamp</th>
