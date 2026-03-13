@@ -18,6 +18,9 @@ interface Statistique {
   color: "green" | "red" | "blue" | "yellow";
 }
 
+const NETWORK_HOSPITALS_PER_PAGE = 2;
+const NETWORK_HIGHLIGHT_BLOOD_TYPES = ["O+", "A+", "B+", "AB+"] as const;
+
 function getStatutColor(statut: "active" | "terminee" | "planifiee") {
   switch (statut) {
     case "active":
@@ -40,11 +43,60 @@ function getStatutLabel(statut: "active" | "terminee" | "planifiee") {
   }
 }
 
+function getNetworkHospitalStatus(totalUnits: number): {
+  label: string;
+  className: string;
+} {
+  if (totalUnits > 0) {
+    return {
+      label: "Actif",
+      className: "bg-green-100 text-green-700",
+    };
+  }
+
+  return {
+    label: "Inactif",
+    className: "bg-gray-100 text-gray-500",
+  };
+}
+
+function getNetworkBloodTypeClass(bloodType: string): string {
+  if (bloodType.startsWith("O")) {
+    return "text-red-600";
+  }
+
+  if (bloodType.startsWith("A")) {
+    return "text-green-600";
+  }
+
+  if (bloodType.startsWith("B")) {
+    return "text-blue-600";
+  }
+
+  return "text-amber-500";
+}
+
+function getNetworkPreviewStocks(
+  stocks: AdminDashboardDto["hopitauxStocks"][number]["stocks"]
+): AdminDashboardDto["hopitauxStocks"][number]["stocks"] {
+  return NETWORK_HIGHLIGHT_BLOOD_TYPES.map((bloodType) => {
+    const stock = stocks.find((item) => item.groupeSanguin === bloodType);
+
+    return (
+      stock ?? {
+        groupeSanguin: bloodType,
+        quantite: 0,
+        seuil: 0,
+        statut: "critique" as const,
+      }
+    );
+  });
+}
+
 export default function Administration() {
   const navigate = useNavigate();
   const unreadMessagesCount = useMessageUnreadCount(Boolean(getAccessToken()));
   const DONORS_PER_PAGE = 5;
-  const NETWORK_HOSPITALS_PER_PAGE = 1;
   const [activeTab, setActiveTab] = useState<"statistiques" | "campagnes" | "utilisateurs" | "reseau">("statistiques");
   const [adminDonorPage, setAdminDonorPage] = useState(1);
   const [networkHospitalPage, setNetworkHospitalPage] = useState(1);
@@ -710,60 +762,91 @@ export default function Administration() {
 
         {activeTab === "reseau" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-3xl shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Stocks des autres hôpitaux</h2>
-              <p className="text-gray-600">
-                Vue consolidée en temps réel du réseau hospitalier pour anticiper les tensions et redistribuer les unités si nécessaire.
-              </p>
-            </div>
+            <div className="rounded-[32px] bg-[#e7f2e8] p-4 shadow-xl sm:p-6 lg:p-8">
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Réseau des Hôpitaux Partenaires</h2>
+                  <p className="mt-2 max-w-3xl text-sm text-gray-600 sm:text-base">
+                    Vue CNTS consolidée pour suivre rapidement les niveaux de stock des autres hôpitaux et anticiper les besoins.
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-gray-500">{networkHospitals.length} hôpitaux</p>
+              </div>
 
-            <div className="space-y-6">
-              {paginatedNetworkHospitals.map((hopital) => (
-                <div key={hopital.id} className="bg-white rounded-3xl shadow-xl p-8">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900">{hopital.nom}</h3>
-                      <p className="text-sm text-gray-600">{hopital.ville}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-sm">
-                      <span className="px-4 py-2 rounded-full bg-green-50 text-green-700 font-semibold">
-                        {hopital.totalUnites} unités
-                      </span>
-                      <span className="px-4 py-2 rounded-full bg-red-50 text-red-700 font-semibold">
-                        {hopital.groupesCritiques} groupes critiques
-                      </span>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                {paginatedNetworkHospitals.map((hopital) => {
+                  const status = getNetworkHospitalStatus(hopital.totalUnites);
+                  const previewStocks = getNetworkPreviewStocks(hopital.stocks);
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {hopital.stocks.map((stock) => (
-                      <div key={`${hopital.id}-${stock.groupeSanguin}`} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                        <div className="font-bold text-lg text-gray-900">{stock.groupeSanguin}</div>
-                        <div className="text-sm text-gray-600">Quantité: {stock.quantite}</div>
-                        <div className="text-sm text-gray-600">Seuil: {stock.seuil}</div>
-                        <span
-                          className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                            stock.statut === "critique"
-                              ? "bg-red-100 text-red-700"
-                              : stock.statut === "faible"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {stock.statut}
+                  return (
+                    <article
+                      key={hopital.id}
+                      className="rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-sm backdrop-blur-sm sm:p-6"
+                    >
+                      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                            <i className="ri-hospital-line text-2xl"></i>
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900">{hopital.nom}</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                              <i className="ri-map-pin-line mr-1"></i>
+                              {hopital.ville}
+                            </p>
+                            <p className="mt-2 text-sm text-gray-500">
+                              <i className="ri-drop-line mr-1"></i>
+                              {hopital.totalUnites} poches disponibles
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
+                          {status.label}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+
+                      <div className="rounded-2xl bg-[#f3f5f3] p-4">
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
+                            Stocks de sang (poches)
+                          </p>
+                          <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                            <span className="rounded-full bg-green-50 px-3 py-1 text-green-700">
+                              Total: {hopital.totalUnites}
+                            </span>
+                            <span className="rounded-full bg-red-50 px-3 py-1 text-red-700">
+                              Critiques: {hopital.groupesCritiques}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                          {previewStocks.map((stock) => (
+                            <div
+                              key={`${hopital.id}-${stock.groupeSanguin}`}
+                              className="rounded-2xl border border-white bg-white px-3 py-4 text-center shadow-sm"
+                            >
+                              <p className={`text-sm font-bold ${getNetworkBloodTypeClass(stock.groupeSanguin)}`}>
+                                {stock.groupeSanguin}
+                              </p>
+                              <p className="mt-2 text-2xl font-bold text-gray-900">{stock.quantite}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
               {networkHospitals.length === 0 && (
                 <div className="bg-white rounded-3xl shadow-xl p-8 text-gray-500">
                   Aucun autre hôpital n'est encore disponible dans le réseau.
                 </div>
               )}
+
               {networkHospitals.length > NETWORK_HOSPITALS_PER_PAGE && (
-                <div className="bg-white rounded-3xl p-6 shadow-xl flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="rounded-3xl bg-white/85 p-6 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-gray-600">
                     Page {networkHospitalPage} / {networkHospitalTotalPages}
                   </p>
