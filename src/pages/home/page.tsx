@@ -533,10 +533,10 @@ export default function Home() {
           </div>
 
           <div className="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/70 text-sm">© 2025 Don de Sang Sénégal. Tous droits réservés.</p>
-            <a href="https://readdy.ai/?ref=logo" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white text-sm transition-colors cursor-pointer">
+            <p className="text-white/70 text-sm">© 2026 Don de Sang Sénégal. Tous droits réservés.</p>
+            {/* <a href="https://readdy.ai/?ref=logo" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white text-sm transition-colors cursor-pointer">
               Powered by Readdy
-            </a>
+            </a> */}
           </div>
         </div>
       </footer>
